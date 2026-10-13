@@ -51,7 +51,7 @@ data class Vehicle(
     var model: String,
     var year: String,
     var plate: String,
-    var type: String = TYPE_MOTOR
+    var type: String = Db.TYPE_MOTOR
 ) {
     fun toJson(): JSONObject = JSONObject().apply {
         put("id", id)
@@ -69,7 +69,7 @@ data class Vehicle(
             obj.optString("model"),
             obj.optString("year"),
             obj.optString("plate"),
-            obj.optString("type", TYPE_MOTOR)
+            obj.optString("type", Db.TYPE_MOTOR)
         )
     }
 }
@@ -85,7 +85,7 @@ data class Workshop(val id: Long, var name: String) {
     }
 }
 
-data class ServiceItem(val id: Long, var name: String, var type: String = TYPE_MOTOR) {
+data class ServiceItem(val id: Long, var name: String, var type: String = Db.TYPE_MOTOR) {
     fun toJson(): JSONObject = JSONObject().apply {
         put("id", id)
         put("name", name)
@@ -96,7 +96,7 @@ data class ServiceItem(val id: Long, var name: String, var type: String = TYPE_M
         fun fromJson(obj: JSONObject) = ServiceItem(
             obj.optLong("id"),
             obj.optString("name"),
-            obj.optString("type", TYPE_MOTOR)
+            obj.optString("type", Db.TYPE_MOTOR)
         )
     }
 }
