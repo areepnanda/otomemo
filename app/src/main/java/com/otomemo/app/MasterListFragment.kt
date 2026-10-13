@@ -33,7 +33,7 @@ abstract class MasterListFragment(layoutRes: Int) : Fragment(layoutRes) {
         reload()
     }
 
-    private fun reload() {
+    protected fun reload() {
         rows.clear()
         rows.addAll(loadRows())
         adapter.notifyDataSetChanged()
@@ -46,7 +46,7 @@ abstract class MasterListFragment(layoutRes: Int) : Fragment(layoutRes) {
             .setTitle("Hapus?")
             .setMessage(row.title)
             .setPositiveButton("Hapus") { _, _ ->
-                deleteRow(row)
+                onDelete(row)
                 reload()
             }
             .setNegativeButton("Batal", null)
