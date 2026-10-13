@@ -5,20 +5,27 @@ import android.content.Intent
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
+import android.view.LayoutInflater
 import android.view.View
+import android.view.ViewGroup
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.EditText
+import android.widget.ImageView
 import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
+import kotlin.concurrent.thread
 
 class FormActivity : AppCompatActivity() {
 
@@ -27,6 +34,9 @@ class FormActivity : AppCompatActivity() {
     private lateinit var spinnerVehicles: MutableList<Vehicle>
     private lateinit var spinnerWorkshops: MutableList<Workshop>
     private val selectedItemNames = LinkedHashSet<String>()
+    private val imageNames = mutableListOf<String>()
+    private var originalImages: List<String> = emptyList()
+    private lateinit var photoAdapter: PhotoAdapter
     private var selectedVehicle: Vehicle? = null
     private var selectedWorkshop: Workshop? = null
     private var currentVehicleId = -1L
@@ -40,6 +50,24 @@ class FormActivity : AppCompatActivity() {
             selectedItemNames.clear()
             names?.let { selectedItemNames.addAll(it) }
             updateItemsInput()
+        }
+    }
+
+    private val photoPicker = registerForActivityResult(
+        ActivityResultContracts.GetMultipleContents()
+    ) { uris ->
+        if (uris.isEmpty()) return@registerForActivityResult
+        Toast.makeText(this, "Menyimpan foto...", Toast.LENGTH_SHORT).show()
+        thread {
+            val added = uris.mapNotNull { ImageStore.saveFromUri(this, it) }
+            runOnUiThread {
+                if (added.isEmpty()) {
+                    Toast.makeText(this, "Gagal menyimpan foto", Toast.LENGTH_SHORT).show()
+                } else {
+                    imageNames.addAll(added)
+                    photoAdapter.notifyDataSetChanged()
+                }
+            }
         }
     }
 
@@ -163,6 +191,17 @@ class FormActivity : AppCompatActivity() {
             pickerLauncher.launch(intent)
         }
 
+        // Foto (lampiran lokal)
+        val recyclerPhotos = findViewById<RecyclerView>(R.id.recyclerPhotos)
+        recyclerPhotos.layoutManager =
+            LinearLayoutManager(this, LinearLayoutManager.HORIZONTAL, false)
+        photoAdapter = PhotoAdapter()
+        recyclerPhotos.adapter = photoAdapter
+        if (editing != null) {
+            imageNames.addAll(editing.images)
+            originalImages = editing.images
+        }
+
         // Tanggal
         val cal = Calendar.getInstance()
         val dateFormat = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
@@ -236,13 +275,16 @@ class FormActivity : AppCompatActivity() {
                 odometer = inputOdometer.text.toString().filter { it.isDigit() }.toLongOrNull() ?: 0L,
                 items = selectedItemNames.joinToString(", "),
                 cost = inputCost.text.toString().filter { it.isDigit() }.toLongOrNull() ?: 0L,
-                notes = inputNotes.text.toString().trim()
+                notes = inputNotes.text.toString().trim(),
+                images = imageNames.toList()
             )
 
             val records = Db.loadRecords(this)
             val existingIndex = records.indexOfFirst { it.id == record.id }
             if (existingIndex >= 0) records[existingIndex] = record else records.add(record)
             Db.saveRecords(this, records)
+
+            (originalImages - imageNames.toSet()).forEach { ImageStore.delete(this, it) }
 
             setResult(RESULT_OK)
             finish()
@@ -251,6 +293,60 @@ class FormActivity : AppCompatActivity() {
 
     private fun updateItemsInput() {
         findViewById<EditText>(R.id.inputItems).setText(selectedItemNames.joinToString(", "))
+    }
+
+    private fun showPhotoDialog(position: Int) {
+        val name = imageNames[position]
+        val iv = ImageView(this)
+        iv.setImageBitmap(ImageStore.loadScaled(this, name, 1024))
+        AlertDialog.Builder(this)
+            .setTitle("Foto ${position + 1}")
+            .setView(iv)
+            .setPositiveButton("Hapus") { _, _ ->
+                imageNames.removeAt(position)
+                photoAdapter.notifyDataSetChanged()
+            }
+            .setNegativeButton("Tutup", null)
+            .show()
+    }
+
+    private inner class PhotoAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+
+        inner class PhotoHolder(view: View) : RecyclerView.ViewHolder(view) {
+            val image: ImageView = view.findViewById(R.id.imagePhoto)
+        }
+
+        inner class AddHolder(view: View) : RecyclerView.ViewHolder(view)
+
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
+            val inf = LayoutInflater.from(parent.context)
+            return if (viewType == 0) {
+                PhotoHolder(inf.inflate(R.layout.item_photo, parent, false))
+            } else {
+                AddHolder(inf.inflate(R.layout.item_photo_add, parent, false))
+            }
+        }
+
+        override fun getItemCount() = imageNames.size + 1
+
+        override fun getItemViewType(position: Int) = if (position == imageNames.size) 1 else 0
+
+        override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
+            when (holder) {
+                is PhotoHolder -> {
+                    holder.image.setImageBitmap(
+                        ImageStore.loadScaled(this@FormActivity, imageNames[position], 176)
+                    )
+                    holder.image.setOnClickListener {
+                        val pos = holder.bindingAdapterPosition
+                        if (pos in imageNames.indices) showPhotoDialog(pos)
+                    }
+                }
+                is AddHolder -> holder.itemView.setOnClickListener {
+                    photoPicker.launch("image/*")
+                }
+            }
+        }
     }
 
     private fun display(v: Vehicle): String =

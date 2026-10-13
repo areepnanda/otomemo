@@ -26,6 +26,10 @@
             android:name=".ItemPickerActivity"
             android:exported="false"
             android:parentActivityName=".FormActivity" />
+        <activity
+            android:name=".ImagePagerActivity"
+            android:exported="false"
+            android:parentActivityName=".MainActivity" />
 
         <provider
             android:name="androidx.core.content.FileProvider"

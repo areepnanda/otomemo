@@ -59,15 +59,24 @@ class RecordsFragment : Fragment(R.layout.fragment_records) {
             if (item.odometer > 0) append("Odometer: ${nf.format(item.odometer)} km\n")
             if (item.workshop.isNotEmpty()) append("Bengkel: ${item.workshop}\n")
             append("Item: ${item.items}\n")
+            if (item.images.isNotEmpty()) append("Foto: ${item.images.size}\n")
             append("Biaya: Rp ${nf.format(item.cost)}\n")
             if (item.notes.isNotEmpty()) append("Catatan: ${item.notes}")
         }
+        val hasPhotos = item.images.isNotEmpty()
         AlertDialog.Builder(requireContext())
             .setTitle(item.vehicleName)
             .setMessage(message)
             .setPositiveButton("Edit") { _, _ -> openEdit(item.id) }
-            .setNeutralButton("Hapus") { _, _ -> confirmDelete(position) }
-            .setNegativeButton("Tutup", null)
+            .setNeutralButton(if (hasPhotos) "Foto (${item.images.size})" else "Tutup") { _, _ ->
+                if (hasPhotos) {
+                    startActivity(
+                        Intent(requireContext(), ImagePagerActivity::class.java)
+                            .putExtra(ImagePagerActivity.EXTRA_IMAGES, item.images.toTypedArray())
+                    )
+                }
+            }
+            .setNegativeButton("Hapus") { _, _ -> confirmDelete(position) }
             .show()
     }
 
@@ -82,6 +91,7 @@ class RecordsFragment : Fragment(R.layout.fragment_records) {
             .setTitle("Hapus catatan?")
             .setMessage("${records[position].vehicleName} - ${records[position].items}")
             .setPositiveButton("Hapus") { _, _ ->
+                records[position].images.forEach { ImageStore.delete(requireContext(), it) }
                 records.removeAt(position)
                 adapter.notifyItemRemoved(position)
                 Db.saveRecords(requireContext(), records)

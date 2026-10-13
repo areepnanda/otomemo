@@ -14,7 +14,8 @@ data class ServiceRecord(
     val odometer: Long,
     val items: String,
     val cost: Long,
-    val notes: String
+    val notes: String,
+    val images: List<String> = emptyList()
 ) {
     fun toJson(): JSONObject = JSONObject().apply {
         put("id", id)
@@ -27,21 +28,29 @@ data class ServiceRecord(
         put("items", items)
         put("cost", cost)
         put("notes", notes)
+        put("images", JSONArray(images))
     }
 
     companion object {
-        fun fromJson(obj: JSONObject): ServiceRecord = ServiceRecord(
-            obj.optLong("id"),
-            obj.optLong("vehicleId", -1L),
-            obj.optString("vehicleName"),
-            obj.optString("plateNumber"),
-            obj.optString("date"),
-            obj.optString("workshop"),
-            obj.optLong("odometer"),
-            obj.optString("items"),
-            obj.optLong("cost"),
-            obj.optString("notes")
-        )
+        fun fromJson(obj: JSONObject): ServiceRecord {
+            val imgs = mutableListOf<String>()
+            obj.optJSONArray("images")?.let { arr ->
+                for (i in 0 until arr.length()) imgs.add(arr.optString(i))
+            }
+            return ServiceRecord(
+                obj.optLong("id"),
+                obj.optLong("vehicleId", -1L),
+                obj.optString("vehicleName"),
+                obj.optString("plateNumber"),
+                obj.optString("date"),
+                obj.optString("workshop"),
+                obj.optLong("odometer"),
+                obj.optString("items"),
+                obj.optLong("cost"),
+                obj.optString("notes"),
+                imgs
+            )
+        }
     }
 }
 
