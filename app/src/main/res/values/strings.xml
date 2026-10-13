@@ -1,0 +1,5 @@
+<resources>
+    <string name="app_name">OtoMemo</string>
+    <string name="add_record">Tambah catatan servis</string>
+    <string name="save">Simpan</string>
+</resources>
