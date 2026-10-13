@@ -5,6 +5,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
+import android.widget.TextView
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.tabs.TabLayoutMediator
 
@@ -36,5 +37,9 @@ class MainActivity : AppCompatActivity() {
                 else -> "Bengkel"
             }
         }.attach()
+
+        findViewById<TextView>(R.id.buttonUpdate).setOnClickListener {
+            Updater.check(this)
+        }
     }
 }
