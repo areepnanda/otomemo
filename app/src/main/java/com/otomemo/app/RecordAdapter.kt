@@ -28,15 +28,16 @@ class RecordAdapter(
 
     override fun onBindViewHolder(holder: Holder, position: Int) {
         val item = items[position]
+        val nf = NumberFormat.getInstance(Locale("in", "ID"))
         holder.title.text = "${item.vehicleName}  •  ${item.plateNumber}".trim()
         holder.detail.text = buildString {
             append(item.date)
+            if (item.odometer > 0) append("  •  ${nf.format(item.odometer)} km")
             if (item.workshop.isNotEmpty()) append("  •  ${item.workshop}")
             append("\n")
             append(item.items)
             if (item.notes.isNotEmpty()) append("\nCatatan: ${item.notes}")
         }
-        val nf = NumberFormat.getInstance(Locale("in", "ID"))
         holder.cost.text = "Rp ${nf.format(item.cost)}"
         holder.itemView.setOnLongClickListener {
             onLongClick(holder.bindingAdapterPosition)

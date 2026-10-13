@@ -10,6 +10,7 @@ data class ServiceRecord(
     val plateNumber: String,
     val date: String,
     val workshop: String,
+    val odometer: Long,
     val items: String,
     val cost: Long,
     val notes: String
@@ -20,6 +21,7 @@ data class ServiceRecord(
         put("plateNumber", plateNumber)
         put("date", date)
         put("workshop", workshop)
+        put("odometer", odometer)
         put("items", items)
         put("cost", cost)
         put("notes", notes)
@@ -32,6 +34,7 @@ data class ServiceRecord(
             obj.optString("plateNumber"),
             obj.optString("date"),
             obj.optString("workshop"),
+            obj.optLong("odometer"),
             obj.optString("items"),
             obj.optLong("cost"),
             obj.optString("notes")

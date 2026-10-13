@@ -40,6 +40,7 @@ class FormActivity : AppCompatActivity() {
         val spinnerVehicle = findViewById<Spinner>(R.id.spinnerVehicle)
         val spinnerWorkshop = findViewById<Spinner>(R.id.spinnerWorkshop)
         val inputDate = findViewById<EditText>(R.id.inputDate)
+        val inputOdometer = findViewById<EditText>(R.id.inputOdometer)
         val inputCost = findViewById<EditText>(R.id.inputCost)
         val inputNotes = findViewById<EditText>(R.id.inputNotes)
         val checkContainer = findViewById<LinearLayout>(R.id.checkContainer)
@@ -121,6 +122,7 @@ class FormActivity : AppCompatActivity() {
                 plateNumber = vehicle.plate,
                 date = inputDate.text.toString().trim(),
                 workshop = selectedWorkshop?.name ?: "",
+                odometer = inputOdometer.text.toString().trim().toLongOrNull() ?: 0L,
                 items = chosenItems.joinToString(", "),
                 cost = inputCost.text.toString().trim().toLongOrNull() ?: 0L,
                 notes = inputNotes.text.toString().trim()
