@@ -40,16 +40,18 @@ object ImageStore {
     fun saveFromUri(context: Context, uri: Uri): String? {
         return try {
             val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-            context.contentResolver.openInputStream(uri)?.use {
+            val boundsStream = context.contentResolver.openInputStream(uri) ?: return null
+            boundsStream.use {
                 BitmapFactory.decodeStream(it, null, bounds)
-            } ?: return null
+            }
             if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
 
             var sample = 1
             while (bounds.outWidth / sample > MAX_DIM || bounds.outHeight / sample > MAX_DIM) {
                 sample *= 2
             }
-            val bitmap = context.contentResolver.openInputStream(uri)?.use {
+            val decodeStream = context.contentResolver.openInputStream(uri) ?: return null
+            val bitmap = decodeStream.use {
                 BitmapFactory.decodeStream(it, null, BitmapFactory.Options().apply { inSampleSize = sample })
             } ?: return null
 
@@ -59,7 +61,8 @@ object ImageStore {
             }
             bitmap.recycle()
             name
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            android.util.Log.e("ImageStore", "saveFromUri gagal", e)
             null
         }
     }
