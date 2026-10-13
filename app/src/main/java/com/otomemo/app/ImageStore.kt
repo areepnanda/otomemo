@@ -37,28 +37,30 @@ object ImageStore {
         file(context, name).delete()
     }
 
-    fun saveFromUri(context: Context, uri: Uri): String? = try {
-        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-        context.contentResolver.openInputStream(uri)?.use {
-            BitmapFactory.decodeStream(it, null, bounds)
-        } ?: return null
-        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
+    fun saveFromUri(context: Context, uri: Uri): String? {
+        return try {
+            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            context.contentResolver.openInputStream(uri)?.use {
+                BitmapFactory.decodeStream(it, null, bounds)
+            } ?: return null
+            if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
 
-        var sample = 1
-        while (bounds.outWidth / sample > MAX_DIM || bounds.outHeight / sample > MAX_DIM) {
-            sample *= 2
-        }
-        val bitmap = context.contentResolver.openInputStream(uri)?.use {
-            BitmapFactory.decodeStream(it, null, BitmapFactory.Options().apply { inSampleSize = sample })
-        } ?: return null
+            var sample = 1
+            while (bounds.outWidth / sample > MAX_DIM || bounds.outHeight / sample > MAX_DIM) {
+                sample *= 2
+            }
+            val bitmap = context.contentResolver.openInputStream(uri)?.use {
+                BitmapFactory.decodeStream(it, null, BitmapFactory.Options().apply { inSampleSize = sample })
+            } ?: return null
 
-        val name = "img_${System.currentTimeMillis()}.jpg"
-        file(context, name).outputStream().use { out ->
-            bitmap.compress(Bitmap.CompressFormat.JPEG, 80, out)
+            val name = "img_${System.currentTimeMillis()}.jpg"
+            file(context, name).outputStream().use { out ->
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 80, out)
+            }
+            bitmap.recycle()
+            name
+        } catch (_: Exception) {
+            null
         }
-        bitmap.recycle()
-        name
-    } catch (_: Exception) {
-        null
     }
 }
