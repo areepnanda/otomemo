@@ -25,12 +25,12 @@ class FormActivity : AppCompatActivity() {
     private lateinit var vehicles: MutableList<Vehicle>
     private lateinit var workshops: MutableList<Workshop>
     private lateinit var items: MutableList<ServiceItem>
+    private lateinit var spinnerVehicles: MutableList<Vehicle>
+    private lateinit var spinnerWorkshops: MutableList<Workshop>
     private val checkBoxes = mutableListOf<Pair<ServiceItem, CheckBox>>()
     private var selectedVehicle: Vehicle? = null
     private var selectedWorkshop: Workshop? = null
-
-    private fun display(v: Vehicle): String =
-        listOf(v.brand, v.model).filter { it.isNotEmpty() }.joinToString(" ").ifEmpty { "-" }
+    private var editRecord: ServiceRecord? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -39,6 +39,12 @@ class FormActivity : AppCompatActivity() {
         vehicles = Db.loadVehicles(this)
         workshops = Db.loadWorkshops(this)
         items = Db.loadItems(this)
+
+        val recordId = intent.getLongExtra(EXTRA_RECORD_ID, -1L)
+        if (recordId >= 0) {
+            editRecord = Db.loadRecords(this).firstOrNull { it.id == recordId }
+        }
+        val editing = editRecord
 
         val spinnerVehicle = findViewById<Spinner>(R.id.spinnerVehicle)
         val spinnerWorkshop = findViewById<Spinner>(R.id.spinnerWorkshop)
@@ -49,19 +55,37 @@ class FormActivity : AppCompatActivity() {
         val checkContainer = findViewById<LinearLayout>(R.id.checkContainer)
         val buttonSave = findViewById<Button>(R.id.buttonSave)
 
+        findViewById<TextView>(R.id.textFormTitle).text =
+            if (editing == null) "Tambah Catatan Service" else "Edit Catatan Service"
+
         findViewById<TextView>(R.id.textNoVehicle).visibility =
-            if (vehicles.isEmpty()) View.VISIBLE else View.GONE
+            if (vehicles.isEmpty() && editing == null) View.VISIBLE else View.GONE
         findViewById<TextView>(R.id.textNoItem).visibility =
             if (items.isEmpty()) View.VISIBLE else View.GONE
 
+        // Kendaraan (master + snapshot record yang sedang diedit)
+        spinnerVehicles = vehicles.toMutableList()
+        var vehicleIndex = -1
+        if (editing != null) {
+            vehicleIndex = spinnerVehicles.indexOfFirst {
+                it.id == editing.vehicleId ||
+                    (it.plate == editing.plateNumber && it.plate.isNotEmpty()) ||
+                    display(it) == editing.vehicleName
+            }
+            if (vehicleIndex < 0) {
+                spinnerVehicles.add(Vehicle(editing.vehicleId, editing.vehicleName, "", "", editing.plateNumber))
+                vehicleIndex = spinnerVehicles.lastIndex
+            }
+        }
+
         val vehicleLabels = mutableListOf("— Pilih kendaraan —")
-        vehicleLabels.addAll(vehicles.map { display(it) })
+        vehicleLabels.addAll(spinnerVehicles.map { display(it) })
         spinnerVehicle.adapter = ArrayAdapter(
             this, android.R.layout.simple_spinner_dropdown_item, vehicleLabels
         )
         spinnerVehicle.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                selectedVehicle = if (position == 0) null else vehicles[position - 1]
+                selectedVehicle = if (position == 0) null else spinnerVehicles[position - 1]
             }
 
             override fun onNothingSelected(parent: AdapterView<*>?) {
@@ -69,14 +93,25 @@ class FormActivity : AppCompatActivity() {
             }
         }
 
+        // Bengkel (master + snapshot record yang sedang diedit)
+        spinnerWorkshops = workshops.toMutableList()
+        var workshopIndex = -1
+        if (editing != null && editing.workshop.isNotEmpty()) {
+            workshopIndex = spinnerWorkshops.indexOfFirst { it.name == editing.workshop }
+            if (workshopIndex < 0) {
+                spinnerWorkshops.add(Workshop(-1L, editing.workshop))
+                workshopIndex = spinnerWorkshops.lastIndex
+            }
+        }
+
         val workshopLabels = mutableListOf("— Tanpa bengkel —")
-        workshopLabels.addAll(workshops.map { it.name })
+        workshopLabels.addAll(spinnerWorkshops.map { it.name })
         spinnerWorkshop.adapter = ArrayAdapter(
             this, android.R.layout.simple_spinner_dropdown_item, workshopLabels
         )
         spinnerWorkshop.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
-                selectedWorkshop = if (position == 0) null else workshops[position - 1]
+                selectedWorkshop = if (position == 0) null else spinnerWorkshops[position - 1]
             }
 
             override fun onNothingSelected(parent: AdapterView<*>?) {
@@ -84,16 +119,34 @@ class FormActivity : AppCompatActivity() {
             }
         }
 
+        // Prefill saat edit
+        if (editing != null) {
+            selectedVehicle = spinnerVehicles[vehicleIndex]
+            spinnerVehicle.setSelection(vehicleIndex + 1)
+            if (workshopIndex >= 0) {
+                selectedWorkshop = spinnerWorkshops[workshopIndex]
+                spinnerWorkshop.setSelection(workshopIndex + 1)
+            }
+        }
+
+        // Checkbox item service
+        val chosenItems = editing?.items?.split(",")?.map { it.trim() }?.toSet() ?: emptySet()
         items.forEach { item ->
             val checkBox = CheckBox(this)
             checkBox.text = item.name
+            checkBox.isChecked = item.name in chosenItems
             checkContainer.addView(checkBox)
             checkBoxes.add(item to checkBox)
         }
 
+        // Tanggal
         val cal = Calendar.getInstance()
         val dateFormat = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
-        inputDate.setText(dateFormat.format(cal.time))
+        if (editing != null) {
+            inputDate.setText(editing.date)
+        } else {
+            inputDate.setText(dateFormat.format(cal.time))
+        }
         inputDate.setOnClickListener {
             DatePickerDialog(
                 this,
@@ -107,6 +160,16 @@ class FormActivity : AppCompatActivity() {
             ).show()
         }
 
+        // Odometer, biaya, catatan
+        if (editing != null) {
+            if (editing.odometer > 0) inputOdometer.setText(editing.odometer.toString())
+            if (editing.cost > 0) {
+                inputCost.setText(NumberFormat.getInstance(Locale("in", "ID")).format(editing.cost))
+            }
+            inputNotes.setText(editing.notes)
+        }
+
+        // Biaya auto-format ribuan
         val numberFormat = NumberFormat.getInstance(Locale("in", "ID"))
         var formattingCost = false
         inputCost.addTextChangedListener(object : TextWatcher {
@@ -134,30 +197,39 @@ class FormActivity : AppCompatActivity() {
                 Toast.makeText(this, "Pilih kendaraan dulu", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
-            val chosenItems = checkBoxes.filter { it.second.isChecked }.map { it.first.name }
-            if (chosenItems.isEmpty()) {
+            val chosen = checkBoxes.filter { it.second.isChecked }.map { it.first.name }
+            if (chosen.isEmpty()) {
                 Toast.makeText(this, "Pilih minimal 1 item service", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
             val record = ServiceRecord(
-                id = System.currentTimeMillis(),
+                id = editing?.id ?: System.currentTimeMillis(),
+                vehicleId = vehicle.id,
                 vehicleName = display(vehicle),
                 plateNumber = vehicle.plate,
                 date = inputDate.text.toString().trim(),
                 workshop = selectedWorkshop?.name ?: "",
-                odometer = inputOdometer.text.toString().trim().toLongOrNull() ?: 0L,
-                items = chosenItems.joinToString(", "),
+                odometer = inputOdometer.text.toString().filter { it.isDigit() }.toLongOrNull() ?: 0L,
+                items = chosen.joinToString(", "),
                 cost = inputCost.text.toString().filter { it.isDigit() }.toLongOrNull() ?: 0L,
                 notes = inputNotes.text.toString().trim()
             )
 
             val records = Db.loadRecords(this)
-            records.add(record)
+            val existingIndex = records.indexOfFirst { it.id == record.id }
+            if (existingIndex >= 0) records[existingIndex] = record else records.add(record)
             Db.saveRecords(this, records)
 
             setResult(RESULT_OK)
             finish()
         }
+    }
+
+    private fun display(v: Vehicle): String =
+        listOf(v.brand, v.model).filter { it.isNotEmpty() }.joinToString(" ").ifEmpty { "-" }
+
+    companion object {
+        const val EXTRA_RECORD_ID = "record_id"
     }
 }

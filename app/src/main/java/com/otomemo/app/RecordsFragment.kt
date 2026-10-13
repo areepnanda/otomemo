@@ -30,19 +30,11 @@ class RecordsFragment : Fragment(R.layout.fragment_records) {
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        adapter = RecordAdapter(records) { position ->
-            AlertDialog.Builder(requireContext())
-                .setTitle("Hapus catatan?")
-                .setMessage("${records[position].vehicleName} - ${records[position].items}")
-                .setPositiveButton("Hapus") { _, _ ->
-                    records.removeAt(position)
-                    adapter.notifyItemRemoved(position)
-                    Db.saveRecords(requireContext(), records)
-                    updateHeader()
-                }
-                .setNegativeButton("Batal", null)
-                .show()
-        }
+        adapter = RecordAdapter(
+            records,
+            onClick = { showDetail(it) },
+            onLongClick = { confirmDelete(it) }
+        )
         view.findViewById<RecyclerView>(R.id.recycler).apply {
             layoutManager = LinearLayoutManager(requireContext())
             adapter = this@RecordsFragment.adapter
@@ -55,6 +47,47 @@ class RecordsFragment : Fragment(R.layout.fragment_records) {
     override fun onResume() {
         super.onResume()
         reload()
+    }
+
+    private fun showDetail(position: Int) {
+        val item = records[position]
+        val nf = NumberFormat.getInstance(Locale("in", "ID"))
+        val message = buildString {
+            if (item.plateNumber.isNotEmpty()) append("Plat: ${item.plateNumber}\n")
+            append("Tanggal: ${item.date}\n")
+            if (item.odometer > 0) append("Odometer: ${nf.format(item.odometer)} km\n")
+            if (item.workshop.isNotEmpty()) append("Bengkel: ${item.workshop}\n")
+            append("Item: ${item.items}\n")
+            append("Biaya: Rp ${nf.format(item.cost)}\n")
+            if (item.notes.isNotEmpty()) append("Catatan: ${item.notes}")
+        }
+        AlertDialog.Builder(requireContext())
+            .setTitle(item.vehicleName)
+            .setMessage(message)
+            .setPositiveButton("Edit") { _, _ -> openEdit(item.id) }
+            .setNeutralButton("Hapus") { _, _ -> confirmDelete(position) }
+            .setNegativeButton("Tutup", null)
+            .show()
+    }
+
+    private fun openEdit(recordId: Long) {
+        val intent = Intent(requireContext(), FormActivity::class.java)
+            .putExtra(FormActivity.EXTRA_RECORD_ID, recordId)
+        formLauncher.launch(intent)
+    }
+
+    private fun confirmDelete(position: Int) {
+        AlertDialog.Builder(requireContext())
+            .setTitle("Hapus catatan?")
+            .setMessage("${records[position].vehicleName} - ${records[position].items}")
+            .setPositiveButton("Hapus") { _, _ ->
+                records.removeAt(position)
+                adapter.notifyItemRemoved(position)
+                Db.saveRecords(requireContext(), records)
+                updateHeader()
+            }
+            .setNegativeButton("Batal", null)
+            .show()
     }
 
     private fun reload() {

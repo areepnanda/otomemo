@@ -11,21 +11,21 @@
         android:id="@+id/inputBrand"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Brand (mis. Honda)"
+        android:hint="Brand"
         android:inputType="textCapWords" />
 
     <EditText
         android:id="@+id/inputModel"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Model (mis. Beat 110)"
+        android:hint="Model"
         android:inputType="textCapWords" />
 
     <EditText
         android:id="@+id/inputYear"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Tahun (mis. 2020)"
+        android:hint="Tahun"
         android:inputType="number"
         android:maxLength="4" />
 
@@ -33,6 +33,6 @@
         android:id="@+id/inputPlate"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Plat nomor (mis. B 1234 XYZ)"
+        android:hint="Plat nomor"
         android:inputType="textCapCharacters" />
 </LinearLayout>

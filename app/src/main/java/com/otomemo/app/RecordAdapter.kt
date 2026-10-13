@@ -9,6 +9,7 @@ import java.util.Locale
 
 class RecordAdapter(
     private val items: List<ServiceRecord>,
+    private val onClick: (Int) -> Unit,
     private val onLongClick: (Int) -> Unit
 ) : RecyclerView.Adapter<RecordAdapter.Holder>() {
 
@@ -39,6 +40,7 @@ class RecordAdapter(
             if (item.notes.isNotEmpty()) append("\nCatatan: ${item.notes}")
         }
         holder.cost.text = "Rp ${nf.format(item.cost)}"
+        holder.itemView.setOnClickListener { onClick(holder.bindingAdapterPosition) }
         holder.itemView.setOnLongClickListener {
             onLongClick(holder.bindingAdapterPosition)
             true

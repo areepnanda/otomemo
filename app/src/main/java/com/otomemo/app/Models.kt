@@ -6,6 +6,7 @@ import org.json.JSONObject
 
 data class ServiceRecord(
     val id: Long,
+    val vehicleId: Long,
     val vehicleName: String,
     val plateNumber: String,
     val date: String,
@@ -17,6 +18,7 @@ data class ServiceRecord(
 ) {
     fun toJson(): JSONObject = JSONObject().apply {
         put("id", id)
+        put("vehicleId", vehicleId)
         put("vehicleName", vehicleName)
         put("plateNumber", plateNumber)
         put("date", date)
@@ -30,6 +32,7 @@ data class ServiceRecord(
     companion object {
         fun fromJson(obj: JSONObject): ServiceRecord = ServiceRecord(
             obj.optLong("id"),
+            obj.optLong("vehicleId", -1L),
             obj.optString("vehicleName"),
             obj.optString("plateNumber"),
             obj.optString("date"),
