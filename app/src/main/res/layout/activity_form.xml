@@ -18,46 +18,76 @@
             android:textSize="20sp"
             android:textStyle="bold" />
 
-        <EditText
-            android:id="@+id/inputVehicle"
+        <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Nama kendaraan (mis. Honda Beat)"
-            android:inputType="textCapWords" />
+            android:text="Kendaraan *"
+            android:textStyle="bold" />
 
-        <EditText
-            android:id="@+id/inputPlate"
+        <Spinner
+            android:id="@+id/spinnerVehicle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Plat nomor (mis. B 1234 XYZ)"
-            android:inputType="textCapCharacters" />
+            android:layout_marginTop="4dp" />
+
+        <TextView
+            android:id="@+id/textNoVehicle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Belum ada kendaraan. Tambahkan dulu di tab Kendaraan."
+            android:textColor="#C62828"
+            android:textSize="12sp"
+            android:visibility="gone" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="Bengkel (opsional)"
+            android:textStyle="bold" />
+
+        <Spinner
+            android:id="@+id/spinnerWorkshop"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp" />
 
         <EditText
             android:id="@+id/inputDate"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
             android:focusable="false"
             android:hint="Tanggal servis"
             android:inputType="none" />
 
-        <EditText
-            android:id="@+id/inputWorkshop"
+        <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Bengkel (opsional)"
-            android:inputType="textCapWords" />
+            android:layout_marginTop="12dp"
+            android:text="Item servis * (boleh pilih lebih dari satu)"
+            android:textStyle="bold" />
 
-        <EditText
-            android:id="@+id/inputItems"
+        <LinearLayout
+            android:id="@+id/checkContainer"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Item servis (mis. Ganti oli, tune up)"
-            android:inputType="textCapSentences" />
+            android:orientation="vertical" />
+
+        <TextView
+            android:id="@+id/textNoItem"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Belum ada item servis. Tambahkan dulu di tab Item."
+            android:textColor="#C62828"
+            android:textSize="12sp"
+            android:visibility="gone" />
 
         <EditText
             android:id="@+id/inputCost"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
             android:hint="Biaya (Rp, angka saja)"
             android:inputType="number" />
 

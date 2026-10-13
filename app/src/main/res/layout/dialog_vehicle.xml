@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingStart="20dp"
+    android:paddingEnd="20dp"
+    android:paddingTop="8dp">
+
+    <EditText
+        android:id="@+id/inputName"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Nama kendaraan (mis. Honda Beat)"
+        android:inputType="textCapWords" />
+
+    <EditText
+        android:id="@+id/inputPlate"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Plat nomor (mis. B 1234 XYZ)"
+        android:inputType="textCapCharacters" />
+</LinearLayout>

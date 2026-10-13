@@ -1,79 +1,40 @@
 package com.otomemo.app
 
-import android.content.Intent
 import android.os.Bundle
-import android.view.View
-import android.widget.TextView
-import android.widget.Toast
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.RecyclerView
-import com.google.android.material.floatingactionbutton.FloatingActionButton
-import java.text.NumberFormat
-import java.util.Locale
+import androidx.fragment.app.Fragment
+import androidx.viewpager2.adapter.FragmentStateAdapter
+import androidx.viewpager2.widget.ViewPager2
+import com.google.android.material.tabs.TabLayout
+import com.google.android.material.tabs.TabLayoutMediator
 
 class MainActivity : AppCompatActivity() {
-
-    private val records = mutableListOf<ServiceRecord>()
-    private lateinit var adapter: RecordAdapter
-    private lateinit var totalText: TextView
-    private lateinit var emptyState: TextView
-
-    private val formLauncher = registerForActivityResult(
-        ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == RESULT_OK) {
-            reload()
-            Toast.makeText(this, "Catatan servis tersimpan", Toast.LENGTH_SHORT).show()
-        }
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        totalText = findViewById(R.id.textTotal)
-        emptyState = findViewById(R.id.emptyState)
-        val recycler = findViewById<RecyclerView>(R.id.recyclerRecords)
-        val fab = findViewById<FloatingActionButton>(R.id.fabAdd)
+        val viewPager = findViewById<ViewPager2>(R.id.viewPager)
+        val tabLayout = findViewById<TabLayout>(R.id.tabLayout)
 
-        adapter = RecordAdapter(records) { position ->
-            AlertDialog.Builder(this)
-                .setTitle("Hapus catatan?")
-                .setMessage("${records[position].vehicleName} - ${records[position].items}")
-                .setPositiveButton("Hapus") { _, _ ->
-                    records.removeAt(position)
-                    adapter.notifyItemRemoved(position)
-                    RecordStore.save(this, records)
-                    updateTotal()
-                }
-                .setNegativeButton("Batal", null)
-                .show()
+        viewPager.adapter = object : FragmentStateAdapter(this) {
+            override fun createFragment(position: Int): Fragment = when (position) {
+                0 -> RecordsFragment()
+                1 -> VehiclesFragment()
+                2 -> ItemsFragment()
+                else -> WorkshopsFragment()
+            }
+
+            override fun getItemCount() = 4
         }
 
-        recycler.layoutManager = LinearLayoutManager(this)
-        recycler.adapter = adapter
-
-        reload()
-
-        fab.setOnClickListener {
-            formLauncher.launch(Intent(this, FormActivity::class.java))
-        }
-    }
-
-    private fun reload() {
-        records.clear()
-        records.addAll(RecordStore.load(this).sortedByDescending { it.id })
-        adapter.notifyDataSetChanged()
-        emptyState.visibility = if (records.isEmpty()) View.VISIBLE else View.GONE
-        updateTotal()
-    }
-
-    private fun updateTotal() {
-        val total = records.sumOf { it.cost }
-        val nf = NumberFormat.getInstance(Locale("in", "ID"))
-        totalText.text = "Total biaya servis: Rp ${nf.format(total)}"
+        TabLayoutMediator(tabLayout, viewPager) { tab, position ->
+            tab.text = when (position) {
+                0 -> "Servis"
+                1 -> "Kendaraan"
+                2 -> "Item"
+                else -> "Bengkel"
+            }
+        }.attach()
     }
 }
