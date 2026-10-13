@@ -76,20 +76,13 @@
             android:text="Item service"
             android:textStyle="bold" />
 
-        <LinearLayout
-            android:id="@+id/checkContainer"
+        <EditText
+            android:id="@+id/inputItems"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical" />
-
-        <TextView
-            android:id="@+id/textNoItem"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="Belum ada item service. Tambahkan dulu lewat menu Item."
-            android:textColor="#C62828"
-            android:textSize="12sp"
-            android:visibility="gone" />
+            android:focusable="false"
+            android:hint="Pilih item service"
+            android:inputType="none" />
 
         <EditText
             android:id="@+id/inputCost"

@@ -1,6 +1,7 @@
 package com.otomemo.app
 
 import android.app.DatePickerDialog
+import android.content.Intent
 import android.os.Bundle
 import android.text.Editable
 import android.text.TextWatcher
@@ -8,12 +9,11 @@ import android.view.View
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.Button
-import android.widget.CheckBox
 import android.widget.EditText
-import android.widget.LinearLayout
 import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import java.text.NumberFormat
 import java.text.SimpleDateFormat
@@ -24,13 +24,24 @@ class FormActivity : AppCompatActivity() {
 
     private lateinit var vehicles: MutableList<Vehicle>
     private lateinit var workshops: MutableList<Workshop>
-    private lateinit var items: MutableList<ServiceItem>
     private lateinit var spinnerVehicles: MutableList<Vehicle>
     private lateinit var spinnerWorkshops: MutableList<Workshop>
-    private val checkBoxes = mutableListOf<Pair<ServiceItem, CheckBox>>()
+    private val selectedItemNames = LinkedHashSet<String>()
     private var selectedVehicle: Vehicle? = null
     private var selectedWorkshop: Workshop? = null
+    private var currentVehicleId = -1L
     private var editRecord: ServiceRecord? = null
+
+    private val pickerLauncher = registerForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == RESULT_OK) {
+            val names = result.data?.getStringArrayExtra(ItemPickerActivity.EXTRA_RESULT)?.toList()
+            selectedItemNames.clear()
+            names?.let { selectedItemNames.addAll(it) }
+            updateItemsInput()
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -38,7 +49,6 @@ class FormActivity : AppCompatActivity() {
 
         vehicles = Db.loadVehicles(this)
         workshops = Db.loadWorkshops(this)
-        items = Db.loadItems(this)
 
         val recordId = intent.getLongExtra(EXTRA_RECORD_ID, -1L)
         if (recordId >= 0) {
@@ -50,9 +60,9 @@ class FormActivity : AppCompatActivity() {
         val spinnerWorkshop = findViewById<Spinner>(R.id.spinnerWorkshop)
         val inputDate = findViewById<EditText>(R.id.inputDate)
         val inputOdometer = findViewById<EditText>(R.id.inputOdometer)
+        val inputItems = findViewById<EditText>(R.id.inputItems)
         val inputCost = findViewById<EditText>(R.id.inputCost)
         val inputNotes = findViewById<EditText>(R.id.inputNotes)
-        val checkContainer = findViewById<LinearLayout>(R.id.checkContainer)
         val buttonSave = findViewById<Button>(R.id.buttonSave)
 
         findViewById<TextView>(R.id.textFormTitle).text =
@@ -60,8 +70,6 @@ class FormActivity : AppCompatActivity() {
 
         findViewById<TextView>(R.id.textNoVehicle).visibility =
             if (vehicles.isEmpty() && editing == null) View.VISIBLE else View.GONE
-        findViewById<TextView>(R.id.textNoItem).visibility =
-            if (items.isEmpty()) View.VISIBLE else View.GONE
 
         // Kendaraan (master + snapshot record yang sedang diedit)
         spinnerVehicles = vehicles.toMutableList()
@@ -73,7 +81,9 @@ class FormActivity : AppCompatActivity() {
                     display(it) == editing.vehicleName
             }
             if (vehicleIndex < 0) {
-                spinnerVehicles.add(Vehicle(editing.vehicleId, editing.vehicleName, "", "", editing.plateNumber))
+                spinnerVehicles.add(
+                    Vehicle(editing.vehicleId, editing.vehicleName, "", "", editing.plateNumber)
+                )
                 vehicleIndex = spinnerVehicles.lastIndex
             }
         }
@@ -86,6 +96,12 @@ class FormActivity : AppCompatActivity() {
         spinnerVehicle.onItemSelectedListener = object : AdapterView.OnItemSelectedListener {
             override fun onItemSelected(parent: AdapterView<*>?, view: View?, position: Int, id: Long) {
                 selectedVehicle = if (position == 0) null else spinnerVehicles[position - 1]
+                val newId = selectedVehicle?.id ?: -1L
+                if (newId != currentVehicleId) {
+                    selectedItemNames.clear()
+                    currentVehicleId = newId
+                    updateItemsInput()
+                }
             }
 
             override fun onNothingSelected(parent: AdapterView<*>?) {
@@ -122,21 +138,28 @@ class FormActivity : AppCompatActivity() {
         // Prefill saat edit
         if (editing != null) {
             selectedVehicle = spinnerVehicles[vehicleIndex]
+            currentVehicleId = selectedVehicle?.id ?: -1L
             spinnerVehicle.setSelection(vehicleIndex + 1)
             if (workshopIndex >= 0) {
                 selectedWorkshop = spinnerWorkshops[workshopIndex]
                 spinnerWorkshop.setSelection(workshopIndex + 1)
             }
+            selectedItemNames.addAll(
+                editing.items.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+            )
         }
 
-        // Checkbox item service
-        val chosenItems = editing?.items?.split(",")?.map { it.trim() }?.toSet() ?: emptySet()
-        items.forEach { item ->
-            val checkBox = CheckBox(this)
-            checkBox.text = item.name
-            checkBox.isChecked = item.name in chosenItems
-            checkContainer.addView(checkBox)
-            checkBoxes.add(item to checkBox)
+        // Input item service (klik untuk buka laman pilih item)
+        inputItems.setOnClickListener {
+            val vehicle = selectedVehicle
+            if (vehicle == null) {
+                Toast.makeText(this, "Pilih kendaraan dulu", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            val intent = Intent(this, ItemPickerActivity::class.java)
+                .putExtra(ItemPickerActivity.EXTRA_TYPE, vehicle.type)
+                .putExtra(ItemPickerActivity.EXTRA_SELECTED, selectedItemNames.toTypedArray())
+            pickerLauncher.launch(intent)
         }
 
         // Tanggal
@@ -197,8 +220,7 @@ class FormActivity : AppCompatActivity() {
                 Toast.makeText(this, "Pilih kendaraan dulu", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
-            val chosen = checkBoxes.filter { it.second.isChecked }.map { it.first.name }
-            if (chosen.isEmpty()) {
+            if (selectedItemNames.isEmpty()) {
                 Toast.makeText(this, "Pilih minimal 1 item service", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
@@ -211,7 +233,7 @@ class FormActivity : AppCompatActivity() {
                 date = inputDate.text.toString().trim(),
                 workshop = selectedWorkshop?.name ?: "",
                 odometer = inputOdometer.text.toString().filter { it.isDigit() }.toLongOrNull() ?: 0L,
-                items = chosen.joinToString(", "),
+                items = selectedItemNames.joinToString(", "),
                 cost = inputCost.text.toString().filter { it.isDigit() }.toLongOrNull() ?: 0L,
                 notes = inputNotes.text.toString().trim()
             )
@@ -224,6 +246,10 @@ class FormActivity : AppCompatActivity() {
             setResult(RESULT_OK)
             finish()
         }
+    }
+
+    private fun updateItemsInput() {
+        findViewById<EditText>(R.id.inputItems).setText(selectedItemNames.joinToString(", "))
     }
 
     private fun display(v: Vehicle): String =

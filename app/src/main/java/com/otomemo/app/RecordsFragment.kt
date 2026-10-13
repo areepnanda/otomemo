@@ -13,6 +13,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import java.text.NumberFormat
+import java.text.SimpleDateFormat
 import java.util.Locale
 
 class RecordsFragment : Fragment(R.layout.fragment_records) {
@@ -92,7 +93,10 @@ class RecordsFragment : Fragment(R.layout.fragment_records) {
 
     private fun reload() {
         records.clear()
-        records.addAll(Db.loadRecords(requireContext()).sortedByDescending { it.id })
+        records.addAll(Db.loadRecords(requireContext()).sortedWith(
+            compareByDescending<ServiceRecord> { parseDate(it.date) }
+                .thenByDescending { it.id }
+        ))
         adapter.notifyDataSetChanged()
         view?.findViewById<TextView>(R.id.emptyState)?.visibility =
             if (records.isEmpty()) View.VISIBLE else View.GONE
@@ -103,5 +107,12 @@ class RecordsFragment : Fragment(R.layout.fragment_records) {
         val nf = NumberFormat.getInstance(Locale("in", "ID"))
         view?.findViewById<TextView>(R.id.textTotal)?.text =
             "Total biaya service: Rp ${nf.format(records.sumOf { it.cost })}"
+    }
+
+    private fun parseDate(date: String): Long = try {
+        SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).apply { isLenient = false }
+            .parse(date)?.time ?: Long.MIN_VALUE
+    } catch (_: Exception) {
+        Long.MIN_VALUE
     }
 }

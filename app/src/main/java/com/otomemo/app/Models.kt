@@ -45,13 +45,21 @@ data class ServiceRecord(
     }
 }
 
-data class Vehicle(val id: Long, var brand: String, var model: String, var year: String, var plate: String) {
+data class Vehicle(
+    val id: Long,
+    var brand: String,
+    var model: String,
+    var year: String,
+    var plate: String,
+    var type: String = TYPE_MOTOR
+) {
     fun toJson(): JSONObject = JSONObject().apply {
         put("id", id)
         put("brand", brand)
         put("model", model)
         put("year", year)
         put("plate", plate)
+        put("type", type)
     }
 
     companion object {
@@ -60,7 +68,8 @@ data class Vehicle(val id: Long, var brand: String, var model: String, var year:
             obj.optString("brand", obj.optString("name")),
             obj.optString("model"),
             obj.optString("year"),
-            obj.optString("plate")
+            obj.optString("plate"),
+            obj.optString("type", TYPE_MOTOR)
         )
     }
 }
@@ -76,14 +85,19 @@ data class Workshop(val id: Long, var name: String) {
     }
 }
 
-data class ServiceItem(val id: Long, var name: String) {
+data class ServiceItem(val id: Long, var name: String, var type: String = TYPE_MOTOR) {
     fun toJson(): JSONObject = JSONObject().apply {
         put("id", id)
         put("name", name)
+        put("type", type)
     }
 
     companion object {
-        fun fromJson(obj: JSONObject) = ServiceItem(obj.optLong("id"), obj.optString("name"))
+        fun fromJson(obj: JSONObject) = ServiceItem(
+            obj.optLong("id"),
+            obj.optString("name"),
+            obj.optString("type", TYPE_MOTOR)
+        )
     }
 }
 
@@ -91,6 +105,11 @@ data class MasterRow(val id: Long, val title: String, val subtitle: String)
 
 object Db {
     private const val PREFS = "otomemo"
+
+    const val TYPE_MOTOR = "motor"
+    const val TYPE_MOBIL = "mobil"
+
+    fun typeLabel(type: String) = if (type == TYPE_MOBIL) "Mobil" else "Motor"
 
     private fun prefs(context: Context) =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
