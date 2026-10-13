@@ -2,6 +2,8 @@ package com.otomemo.app
 
 import android.app.DatePickerDialog
 import android.os.Bundle
+import android.text.Editable
+import android.text.TextWatcher
 import android.view.View
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
@@ -13,6 +15,7 @@ import android.widget.Spinner
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import java.text.NumberFormat
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -104,6 +107,27 @@ class FormActivity : AppCompatActivity() {
             ).show()
         }
 
+        val numberFormat = NumberFormat.getInstance(Locale("in", "ID"))
+        var formattingCost = false
+        inputCost.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {}
+
+            override fun afterTextChanged(s: Editable?) {
+                if (formattingCost || s == null) return
+                formattingCost = true
+                val digits = s.toString().filter { it.isDigit() }.take(15)
+                if (digits.isEmpty()) {
+                    s.clear()
+                } else {
+                    val formatted = numberFormat.format(digits.toLong())
+                    if (s.toString() != formatted) s.replace(0, s.length, formatted)
+                }
+                formattingCost = false
+            }
+        })
+
         buttonSave.setOnClickListener {
             val vehicle = selectedVehicle
             if (vehicle == null) {
@@ -124,7 +148,7 @@ class FormActivity : AppCompatActivity() {
                 workshop = selectedWorkshop?.name ?: "",
                 odometer = inputOdometer.text.toString().trim().toLongOrNull() ?: 0L,
                 items = chosenItems.joinToString(", "),
-                cost = inputCost.text.toString().trim().toLongOrNull() ?: 0L,
+                cost = inputCost.text.toString().filter { it.isDigit() }.toLongOrNull() ?: 0L,
                 notes = inputNotes.text.toString().trim()
             )
 
