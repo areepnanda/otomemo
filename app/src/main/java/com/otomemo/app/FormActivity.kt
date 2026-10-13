@@ -147,6 +147,7 @@ class FormActivity : AppCompatActivity() {
             selectedItemNames.addAll(
                 editing.items.split(",").map { it.trim() }.filter { it.isNotEmpty() }
             )
+            updateItemsInput()
         }
 
         // Input item service (klik untuk buka laman pilih item)
