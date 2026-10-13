@@ -39,15 +39,23 @@ data class ServiceRecord(
     }
 }
 
-data class Vehicle(val id: Long, var name: String, var plate: String) {
+data class Vehicle(val id: Long, var brand: String, var model: String, var year: String, var plate: String) {
     fun toJson(): JSONObject = JSONObject().apply {
         put("id", id)
-        put("name", name)
+        put("brand", brand)
+        put("model", model)
+        put("year", year)
         put("plate", plate)
     }
 
     companion object {
-        fun fromJson(obj: JSONObject) = Vehicle(obj.optLong("id"), obj.optString("name"), obj.optString("plate"))
+        fun fromJson(obj: JSONObject) = Vehicle(
+            obj.optLong("id"),
+            obj.optString("brand", obj.optString("name")),
+            obj.optString("model"),
+            obj.optString("year"),
+            obj.optString("plate")
+        )
     }
 }
 

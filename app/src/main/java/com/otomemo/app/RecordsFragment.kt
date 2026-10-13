@@ -23,7 +23,10 @@ class RecordsFragment : Fragment(R.layout.fragment_records) {
     private val formLauncher = registerForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
-        if (result.resultCode == AppCompatActivity.RESULT_OK) reload()
+        if (result.resultCode == AppCompatActivity.RESULT_OK) {
+            reload()
+            Toast.makeText(requireContext(), "Catatan service tersimpan", Toast.LENGTH_SHORT).show()
+        }
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -66,6 +69,6 @@ class RecordsFragment : Fragment(R.layout.fragment_records) {
     private fun updateHeader() {
         val nf = NumberFormat.getInstance(Locale("in", "ID"))
         view?.findViewById<TextView>(R.id.textTotal)?.text =
-            "Total biaya servis: Rp ${nf.format(records.sumOf { it.cost })}"
+            "Total biaya service: Rp ${nf.format(records.sumOf { it.cost })}"
     }
 }

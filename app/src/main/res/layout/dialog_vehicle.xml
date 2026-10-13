@@ -8,11 +8,26 @@
     android:paddingTop="8dp">
 
     <EditText
-        android:id="@+id/inputName"
+        android:id="@+id/inputBrand"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="Nama kendaraan (mis. Honda Beat)"
+        android:hint="Brand (mis. Honda)"
         android:inputType="textCapWords" />
+
+    <EditText
+        android:id="@+id/inputModel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Model (mis. Beat 110)"
+        android:inputType="textCapWords" />
+
+    <EditText
+        android:id="@+id/inputYear"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Tahun (mis. 2020)"
+        android:inputType="number"
+        android:maxLength="4" />
 
     <EditText
         android:id="@+id/inputPlate"

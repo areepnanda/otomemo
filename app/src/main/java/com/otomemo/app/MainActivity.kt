@@ -1,45 +1,71 @@
 package com.otomemo.app
 
 import android.os.Bundle
+import android.view.MenuItem
+import androidx.appcompat.app.ActionBarDrawerToggle
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.Toolbar
+import androidx.core.view.GravityCompat
+import androidx.drawerlayout.widget.DrawerLayout
 import androidx.fragment.app.Fragment
-import androidx.viewpager2.adapter.FragmentStateAdapter
-import androidx.viewpager2.widget.ViewPager2
-import android.widget.TextView
-import com.google.android.material.tabs.TabLayout
-import com.google.android.material.tabs.TabLayoutMediator
+import com.google.android.material.navigation.NavigationView
 
 class MainActivity : AppCompatActivity() {
+
+    private lateinit var drawerLayout: DrawerLayout
+    private lateinit var navView: NavigationView
+    private lateinit var toolbar: Toolbar
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        val viewPager = findViewById<ViewPager2>(R.id.viewPager)
-        val tabLayout = findViewById<TabLayout>(R.id.tabLayout)
+        drawerLayout = findViewById(R.id.drawerLayout)
+        navView = findViewById(R.id.navView)
+        toolbar = findViewById(R.id.toolbar)
 
-        viewPager.adapter = object : FragmentStateAdapter(this) {
-            override fun createFragment(position: Int): Fragment = when (position) {
-                0 -> RecordsFragment()
-                1 -> VehiclesFragment()
-                2 -> ItemsFragment()
-                else -> WorkshopsFragment()
+        val toggle = ActionBarDrawerToggle(
+            this, drawerLayout, toolbar, R.string.nav_open, R.string.nav_close
+        )
+        drawerLayout.addDrawerListener(toggle)
+        toggle.syncState()
+
+        navView.setNavigationItemSelectedListener { item ->
+            if (item.itemId == R.id.nav_update) {
+                Updater.check(this)
+            } else {
+                select(item.itemId)
             }
-
-            override fun getItemCount() = 4
+            drawerLayout.closeDrawer(GravityCompat.START)
+            true
         }
 
-        TabLayoutMediator(tabLayout, viewPager) { tab, position ->
-            tab.text = when (position) {
-                0 -> "Servis"
-                1 -> "Kendaraan"
-                2 -> "Item"
-                else -> "Bengkel"
-            }
-        }.attach()
-
-        findViewById<TextView>(R.id.buttonUpdate).setOnClickListener {
-            Updater.check(this)
+        if (savedInstanceState == null) {
+            select(R.id.nav_service)
+        } else {
+            val current = navView.checkedItem?.itemId ?: R.id.nav_service
+            toolbar.title = titleFor(current)
         }
+    }
+
+    private fun select(itemId: Int) {
+        val fragment: Fragment = when (itemId) {
+            R.id.nav_vehicles -> VehiclesFragment()
+            R.id.nav_items -> ItemsFragment()
+            R.id.nav_workshops -> WorkshopsFragment()
+            else -> RecordsFragment()
+        }
+        toolbar.title = titleFor(itemId)
+        navView.setCheckedItem(itemId)
+        supportFragmentManager.beginTransaction()
+            .replace(R.id.container, fragment)
+            .commit()
+    }
+
+    private fun titleFor(itemId: Int): String = when (itemId) {
+        R.id.nav_vehicles -> "Kendaraan"
+        R.id.nav_items -> "Item"
+        R.id.nav_workshops -> "Bengkel"
+        else -> "Service"
     }
 }

@@ -26,6 +26,9 @@ class FormActivity : AppCompatActivity() {
     private var selectedVehicle: Vehicle? = null
     private var selectedWorkshop: Workshop? = null
 
+    private fun display(v: Vehicle): String =
+        listOf(v.brand, v.model).filter { it.isNotEmpty() }.joinToString(" ").ifEmpty { "-" }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_form)
@@ -48,7 +51,7 @@ class FormActivity : AppCompatActivity() {
             if (items.isEmpty()) View.VISIBLE else View.GONE
 
         val vehicleLabels = mutableListOf("— Pilih kendaraan —")
-        vehicleLabels.addAll(vehicles.map { it.name })
+        vehicleLabels.addAll(vehicles.map { display(it) })
         spinnerVehicle.adapter = ArrayAdapter(
             this, android.R.layout.simple_spinner_dropdown_item, vehicleLabels
         )
@@ -108,13 +111,13 @@ class FormActivity : AppCompatActivity() {
             }
             val chosenItems = checkBoxes.filter { it.second.isChecked }.map { it.first.name }
             if (chosenItems.isEmpty()) {
-                Toast.makeText(this, "Pilih minimal 1 item servis", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Pilih minimal 1 item service", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
             val record = ServiceRecord(
                 id = System.currentTimeMillis(),
-                vehicleName = vehicle.name,
+                vehicleName = display(vehicle),
                 plateNumber = vehicle.plate,
                 date = inputDate.text.toString().trim(),
                 workshop = selectedWorkshop?.name ?: "",

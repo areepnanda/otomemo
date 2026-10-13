@@ -23,7 +23,7 @@
             android:layout_height="wrap_content"
             android:gravity="center"
             android:padding="32dp"
-            android:text="Belum ada catatan servis.\nTekan tombol + untuk menambah."
+            android:text="Belum ada catatan service.\nTekan tombol + untuk menambah."
             android:textColor="#999999"
             android:visibility="gone" />
 

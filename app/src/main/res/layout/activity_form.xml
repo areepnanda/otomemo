@@ -14,7 +14,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="16dp"
-            android:text="Tambah Catatan Servis"
+            android:text="Tambah Catatan Service"
             android:textSize="20sp"
             android:textStyle="bold" />
 
@@ -34,7 +34,7 @@
             android:id="@+id/textNoVehicle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Belum ada kendaraan. Tambahkan dulu di tab Kendaraan."
+            android:text="Belum ada kendaraan. Tambahkan dulu lewat menu Kendaraan."
             android:textColor="#C62828"
             android:textSize="12sp"
             android:visibility="gone" />
@@ -58,14 +58,14 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
             android:focusable="false"
-            android:hint="Tanggal servis"
+            android:hint="Tanggal service"
             android:inputType="none" />
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="12dp"
-            android:text="Item servis * (boleh pilih lebih dari satu)"
+            android:text="Item service * (boleh pilih lebih dari satu)"
             android:textStyle="bold" />
 
         <LinearLayout
@@ -78,7 +78,7 @@
             android:id="@+id/textNoItem"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Belum ada item servis. Tambahkan dulu di tab Item."
+            android:text="Belum ada item service. Tambahkan dulu lewat menu Item."
             android:textColor="#C62828"
             android:textSize="12sp"
             android:visibility="gone" />

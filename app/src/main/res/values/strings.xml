@@ -1,5 +1,7 @@
 <resources>
     <string name="app_name">OtoMemo</string>
-    <string name="add_record">Tambah catatan servis</string>
+    <string name="add_record">Tambah catatan service</string>
     <string name="save">Simpan</string>
+    <string name="nav_open">Buka menu</string>
+    <string name="nav_close">Tutup menu</string>
 </resources>
