@@ -1,18 +1,39 @@
 package com.otomemo.app
 
+import android.os.Bundle
+import android.view.View
 import android.widget.ArrayAdapter
 import android.widget.EditText
 import android.widget.Spinner
 import androidx.appcompat.app.AlertDialog
+import com.google.android.material.tabs.TabLayout
 
-class ItemsFragment : MasterListFragment(R.layout.fragment_list) {
+class ItemsFragment : MasterListFragment(R.layout.fragment_items) {
 
     private lateinit var items: MutableList<ServiceItem>
+    private var selectedType = Db.TYPE_MOBIL
+
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+        val tabs = view.findViewById<TabLayout>(R.id.tabType)
+        tabs.addTab(tabs.newTab().setText(Db.typeLabel(Db.TYPE_MOBIL)))
+        tabs.addTab(tabs.newTab().setText(Db.typeLabel(Db.TYPE_MOTOR)))
+        tabs.addOnTabSelectedListener(object : TabLayout.OnTabSelectedListener {
+            override fun onTabSelected(tab: TabLayout.Tab) {
+                selectedType = if (tab.position == 0) Db.TYPE_MOBIL else Db.TYPE_MOTOR
+                reload()
+            }
+
+            override fun onTabUnselected(tab: TabLayout.Tab) {}
+
+            override fun onTabReselected(tab: TabLayout.Tab) {}
+        })
+    }
 
     override fun loadRows(): List<MasterRow> {
         items = Db.loadItems(requireContext())
-        return items.map {
-            MasterRow(it.id, it.name, Db.typeLabel(it.type))
+        return items.filter { it.type == selectedType }.map {
+            MasterRow(it.id, it.name, "")
         }
     }
 
@@ -36,9 +57,8 @@ class ItemsFragment : MasterListFragment(R.layout.fragment_list) {
             listOf(Db.typeLabel(Db.TYPE_MOBIL), Db.typeLabel(Db.TYPE_MOTOR))
         )
         input.setText(existing?.name)
-        existing?.let {
-            spinnerType.setSelection(if (it.type == Db.TYPE_MOBIL) 0 else 1)
-        }
+        val typeIndex = if ((existing?.type ?: selectedType) == Db.TYPE_MOBIL) 0 else 1
+        spinnerType.setSelection(typeIndex)
         AlertDialog.Builder(requireContext())
             .setTitle(if (existing == null) "Tambah Item Servis" else "Edit Item Servis")
             .setView(view)
