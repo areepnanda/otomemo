@@ -1,27 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"
-    android:gravity="center"
-    android:minHeight="52dp"
-    android:orientation="vertical"
-    android:padding="4dp">
+    android:layout_height="44dp"
+    android:foreground="?attr/selectableItemBackgroundBorderless">
 
     <TextView
         android:id="@+id/textDay"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="30dp"
+        android:layout_height="30dp"
+        android:layout_gravity="center_horizontal|top"
+        android:layout_marginTop="3dp"
         android:gravity="center"
         android:textColor="#333333"
         android:textSize="13sp" />
 
-    <TextView
-        android:id="@+id/textCost"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:gravity="center"
-        android:textColor="@color/primaryDark"
-        android:textSize="10sp"
-        android:textStyle="bold"
+    <View
+        android:id="@+id/dotExpense"
+        android:layout_width="5dp"
+        android:layout_height="5dp"
+        android:layout_gravity="center_horizontal|bottom"
+        android:layout_marginBottom="3dp"
+        android:background="@drawable/bg_dot_expense"
         android:visibility="gone" />
-</LinearLayout>
+</FrameLayout>

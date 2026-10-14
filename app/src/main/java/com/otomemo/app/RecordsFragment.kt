@@ -38,16 +38,19 @@ class RecordsFragment : Fragment(R.layout.fragment_records) {
     private val nf = NumberFormat.getInstance(Locale("in", "ID"))
     private lateinit var adapter: RecordAdapter
     private lateinit var dayAdapter: DayAdapter
+    private lateinit var dayExpenseAdapter: DayExpenseAdapter
+    private val dayRecords = mutableMapOf<Int, MutableList<ServiceRecord>>()
 
     private data class DayCell(val day: Int, val total: Long, val records: List<ServiceRecord>)
 
     private inner class DayAdapter : RecyclerView.Adapter<DayAdapter.Holder>() {
 
         val cells = mutableListOf<DayCell>()
+        var selectedDay = 0
 
         inner class Holder(view: View) : RecyclerView.ViewHolder(view) {
             val day: TextView = view.findViewById(R.id.textDay)
-            val cost: TextView = view.findViewById(R.id.textCost)
+            val dot: View = view.findViewById(R.id.dotExpense)
         }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) =
@@ -58,25 +61,61 @@ class RecordsFragment : Fragment(R.layout.fragment_records) {
         override fun onBindViewHolder(holder: Holder, position: Int) {
             val cell = cells[position]
             if (cell.day <= 0) {
-                holder.itemView.background = null
-                holder.day.text = ""
-                holder.cost.visibility = View.GONE
                 holder.itemView.setOnClickListener(null)
                 holder.itemView.isClickable = false
+                holder.day.background = null
+                holder.day.text = ""
+                holder.dot.visibility = View.GONE
                 return
             }
             holder.day.text = cell.day.toString()
-            if (cell.total > 0) {
-                holder.itemView.setBackgroundResource(R.drawable.bg_day_highlight)
-                holder.cost.visibility = View.VISIBLE
-                holder.cost.text = fmtShort(cell.total)
-                holder.itemView.setOnClickListener { showDayDialog(cell.day, cell.records) }
-            } else {
-                holder.itemView.background = null
-                holder.cost.visibility = View.GONE
-                holder.itemView.setOnClickListener(null)
-                holder.itemView.isClickable = false
+            when {
+                cell.day == selectedDay -> {
+                    holder.day.setBackgroundResource(R.drawable.bg_day_selected)
+                    holder.day.setTextColor(Color.WHITE)
+                }
+                isToday(cell.day) -> {
+                    holder.day.setBackgroundResource(R.drawable.bg_day_today)
+                    holder.day.setTextColor(Color.parseColor("#00796B"))
+                }
+                else -> {
+                    holder.day.background = null
+                    holder.day.setTextColor(Color.parseColor("#333333"))
+                }
             }
+            holder.dot.visibility = if (cell.total > 0) View.VISIBLE else View.GONE
+            holder.itemView.setOnClickListener {
+                selectedDay = if (selectedDay == cell.day) 0 else cell.day
+                notifyDataSetChanged()
+                updateDayPanel()
+            }
+        }
+    }
+
+    private inner class DayExpenseAdapter : RecyclerView.Adapter<DayExpenseAdapter.Holder>() {
+
+        val rows = mutableListOf<ServiceRecord>()
+
+        inner class Holder(view: View) : RecyclerView.ViewHolder(view) {
+            val vehicle: TextView = view.findViewById(R.id.textVehicle)
+            val detail: TextView = view.findViewById(R.id.textItems)
+            val cost: TextView = view.findViewById(R.id.textCost)
+        }
+
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) =
+            Holder(layoutInflater.inflate(R.layout.item_day_expense, parent, false))
+
+        override fun getItemCount() = rows.size
+
+        override fun onBindViewHolder(holder: Holder, position: Int) {
+            val r = rows[position]
+            holder.vehicle.text = r.vehicleName
+            holder.detail.text = listOfNotNull(
+                r.items.ifEmpty { null },
+                r.workshop.ifEmpty { null }
+            ).joinToString("  •  ")
+            holder.cost.text = "Rp ${nf.format(r.cost)}"
+            holder.itemView.setOnClickListener { showDetail(r) }
         }
     }
 
@@ -107,8 +146,10 @@ class RecordsFragment : Fragment(R.layout.fragment_records) {
 
         adapter = RecordAdapter(
             shown,
-            onClick = { showDetail(it) },
-            onLongClick = { confirmDelete(it) }
+            onClick = { position -> if (position in shown.indices) showDetail(shown[position]) },
+            onLongClick = { position ->
+                if (position in shown.indices) confirmDelete(shown[position])
+            }
         )
         view.findViewById<RecyclerView>(R.id.recycler).apply {
             layoutManager = LinearLayoutManager(requireContext())
@@ -144,14 +185,21 @@ class RecordsFragment : Fragment(R.layout.fragment_records) {
             layoutManager = GridLayoutManager(requireContext(), 7)
             adapter = dayAdapter
         }
+        dayExpenseAdapter = DayExpenseAdapter()
+        view.findViewById<RecyclerView>(R.id.recyclerDayExpenses).apply {
+            layoutManager = LinearLayoutManager(requireContext())
+            adapter = dayExpenseAdapter
+        }
         buildWeekHeader(view)
 
         view.findViewById<TextView>(R.id.buttonPrev).setOnClickListener {
             current.add(Calendar.MONTH, -1)
+            dayAdapter.selectedDay = 0
             refreshCalendar()
         }
         view.findViewById<TextView>(R.id.buttonNext).setOnClickListener {
             current.add(Calendar.MONTH, 1)
+            dayAdapter.selectedDay = 0
             refreshCalendar()
         }
     }
@@ -233,13 +281,15 @@ class RecordsFragment : Fragment(R.layout.fragment_records) {
         view.findViewById<TextView>(R.id.textMonth).text =
             monthTitle.replaceFirstChar { it.uppercase() }
 
-        val byDay = mutableMapOf<Int, MutableList<ServiceRecord>>()
+        dayRecords.clear()
+        var monthTotal = 0L
         for (r in records.filter { matchesVehicle(it) }) {
             val c = Dates.toCalendar(r.date) ?: continue
             if (c.get(Calendar.YEAR) == current.get(Calendar.YEAR) &&
                 c.get(Calendar.MONTH) == current.get(Calendar.MONTH)
             ) {
-                byDay.getOrPut(c.get(Calendar.DAY_OF_MONTH)) { mutableListOf() }.add(r)
+                dayRecords.getOrPut(c.get(Calendar.DAY_OF_MONTH)) { mutableListOf() }.add(r)
+                monthTotal += r.cost
             }
         }
 
@@ -247,12 +297,9 @@ class RecordsFragment : Fragment(R.layout.fragment_records) {
         val firstDow = current.firstDayOfWeek
         val offset = (current.get(Calendar.DAY_OF_WEEK) - firstDow + 7) % 7
         repeat(offset) { cells.add(DayCell(-1, 0, emptyList())) }
-        var monthTotal = 0L
         for (day in 1..current.getActualMaximum(Calendar.DAY_OF_MONTH)) {
-            val recs = byDay[day].orEmpty()
-            val total = recs.sumOf { it.cost }
-            monthTotal += total
-            cells.add(DayCell(day, total, recs))
+            val recs = dayRecords[day].orEmpty()
+            cells.add(DayCell(day, recs.sumOf { it.cost }, recs))
         }
 
         dayAdapter.cells.clear()
@@ -260,7 +307,49 @@ class RecordsFragment : Fragment(R.layout.fragment_records) {
         dayAdapter.notifyDataSetChanged()
 
         view.findViewById<TextView>(R.id.textMonthTotal).text =
-            "Pengeluaran: Rp ${nf.format(monthTotal)}"
+            "Rp ${nf.format(monthTotal)}"
+        view.findViewById<TextView>(R.id.textMonthCount).text =
+            "${dayRecords.values.sumOf { it.size }} catatan"
+        updateDayPanel()
+    }
+
+    private fun updateDayPanel() {
+        val view = view ?: return
+        val header = view.findViewById<TextView>(R.id.textDayHeader)
+        val empty = view.findViewById<TextView>(R.id.textDayEmpty)
+        val list = view.findViewById<RecyclerView>(R.id.recyclerDayExpenses)
+        val day = if (::dayAdapter.isInitialized) dayAdapter.selectedDay else 0
+        if (day <= 0) {
+            header.text = "Pengeluaran harian"
+            empty.text = "Ketuk tanggal untuk melihat pengeluaran"
+            empty.visibility = View.VISIBLE
+            list.visibility = View.GONE
+        } else {
+            val cal = current.clone() as Calendar
+            cal.set(Calendar.DAY_OF_MONTH, day)
+            header.text =
+                SimpleDateFormat("EEEE, d MMMM yyyy", Locale.getDefault()).format(cal.time)
+                    .replaceFirstChar { it.uppercase() }
+            val recs = dayRecords[day].orEmpty()
+            if (recs.isEmpty()) {
+                empty.text = "Tidak ada pengeluaran di tanggal ini"
+                empty.visibility = View.VISIBLE
+                list.visibility = View.GONE
+            } else {
+                empty.visibility = View.GONE
+                list.visibility = View.VISIBLE
+            }
+            dayExpenseAdapter.rows.clear()
+            dayExpenseAdapter.rows.addAll(recs)
+            dayExpenseAdapter.notifyDataSetChanged()
+        }
+    }
+
+    private fun isToday(day: Int): Boolean {
+        val now = Calendar.getInstance()
+        return now.get(Calendar.YEAR) == current.get(Calendar.YEAR) &&
+            now.get(Calendar.MONTH) == current.get(Calendar.MONTH) &&
+            now.get(Calendar.DAY_OF_MONTH) == day
     }
 
     private fun buildWeekHeader(view: View) {
@@ -282,8 +371,7 @@ class RecordsFragment : Fragment(R.layout.fragment_records) {
         }
     }
 
-    private fun showDetail(position: Int) {
-        val item = shown[position]
+    private fun showDetail(item: ServiceRecord) {
         val message = buildString {
             if (item.plateNumber.isNotEmpty()) append("Plat: ${item.plateNumber}\n")
             append("Tanggal: ${item.date}\n")
@@ -307,7 +395,7 @@ class RecordsFragment : Fragment(R.layout.fragment_records) {
                     )
                 }
             }
-            .setNegativeButton("Hapus") { _, _ -> confirmDelete(position) }
+            .setNegativeButton("Hapus") { _, _ -> confirmDelete(item) }
             .show()
     }
 
@@ -317,18 +405,20 @@ class RecordsFragment : Fragment(R.layout.fragment_records) {
         formLauncher.launch(intent)
     }
 
-    private fun confirmDelete(position: Int) {
+    private fun confirmDelete(item: ServiceRecord) {
+        val position = shown.indexOfFirst { it.id == item.id }
         AlertDialog.Builder(requireContext())
             .setTitle("Hapus catatan?")
-            .setMessage("${shown[position].vehicleName} - ${shown[position].items}")
+            .setMessage("${item.vehicleName} - ${item.items}")
             .setPositiveButton("Hapus") { _, _ ->
-                val removed = shown[position]
-                removed.images.forEach { ImageStore.delete(requireContext(), it) }
-                records.removeAll { it.id == removed.id }
-                shown.removeAt(position)
-                adapter.notifyItemRemoved(position)
+                item.images.forEach { ImageStore.delete(requireContext(), it) }
+                records.removeAll { it.id == item.id }
+                if (position >= 0) {
+                    shown.removeAt(position)
+                    adapter.notifyItemRemoved(position)
+                }
                 Db.saveRecords(requireContext(), records)
-                SheetSync.delete(requireContext(), "records", removed.id)
+                SheetSync.delete(requireContext(), "records", item.id)
                 view?.findViewById<TextView>(R.id.textTotal)?.text =
                     "Total biaya service: Rp ${nf.format(shown.sumOf { it.cost })}"
                 refreshCalendar()
@@ -337,36 +427,5 @@ class RecordsFragment : Fragment(R.layout.fragment_records) {
             .show()
     }
 
-    private fun showDayDialog(day: Int, dayRecords: List<ServiceRecord>) {
-        val monthTitle = SimpleDateFormat("MMMM yyyy", Locale.getDefault()).format(current.time)
-        val message = dayRecords.joinToString("\n\n") { r ->
-            buildString {
-                append("• ${r.vehicleName} - ${r.items}")
-                append("\nRp ${nf.format(r.cost)}")
-                if (r.workshop.isNotEmpty()) append("\nBengkel: ${r.workshop}")
-            }
-        }
-        AlertDialog.Builder(requireContext())
-            .setTitle("$day $monthTitle")
-            .setMessage(message)
-            .setPositiveButton("Tutup", null)
-            .show()
-    }
-
     private fun parseDate(date: String): Long = Dates.parse(date) ?: Long.MIN_VALUE
-
-    private fun fmtShort(v: Long): String = when {
-        v <= 0L -> ""
-        v >= 1_000_000L -> {
-            val m = v / 1_000_000.0
-            val s = if (m == kotlin.math.floor(m)) {
-                m.toLong().toString()
-            } else {
-                String.format(Locale("in", "ID"), "%.1f", m)
-            }
-            "${s}jt"
-        }
-        v >= 1_000L -> "${v / 1_000}rb"
-        else -> v.toString()
-    }
 }
