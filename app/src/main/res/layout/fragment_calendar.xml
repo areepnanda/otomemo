@@ -51,20 +51,24 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:gravity="center"
-        android:paddingBottom="8dp"
+        android:paddingBottom="4dp"
         android:textColor="#666666" />
 
-    <ScrollView
+    <LinearLayout
+        android:id="@+id/weekHeader"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingStart="8dp"
+        android:paddingEnd="8dp" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/recyclerDays"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1">
-
-        <GridLayout
-            android:id="@+id/gridCalendar"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:paddingStart="8dp"
-            android:paddingEnd="8dp"
-            android:paddingBottom="88dp" />
-    </ScrollView>
+        android:layout_weight="1"
+        android:paddingStart="8dp"
+        android:paddingTop="4dp"
+        android:paddingEnd="8dp"
+        android:paddingBottom="16dp" />
 </LinearLayout>
