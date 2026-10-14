@@ -2,7 +2,10 @@ package com.otomemo.app
 
 import android.os.Bundle
 import android.view.MenuItem
+import android.widget.EditText
+import android.widget.Toast
 import androidx.appcompat.app.ActionBarDrawerToggle
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.core.view.GravityCompat
@@ -30,11 +33,13 @@ class MainActivity : AppCompatActivity() {
         drawerLayout.addDrawerListener(toggle)
         toggle.syncState()
 
+        SheetSync.flushPending(this)
+
         navView.setNavigationItemSelectedListener { item ->
-            if (item.itemId == R.id.nav_update) {
-                Updater.check(this)
-            } else {
-                select(item.itemId)
+            when (item.itemId) {
+                R.id.nav_update -> Updater.check(this)
+                R.id.nav_sync -> showSyncDialog()
+                else -> select(item.itemId)
             }
             drawerLayout.closeDrawer(GravityCompat.START)
             true
@@ -67,5 +72,43 @@ class MainActivity : AppCompatActivity() {
         R.id.nav_items -> "Item"
         R.id.nav_workshops -> "Bengkel"
         else -> "Service"
+    }
+
+    private fun showSyncDialog() {
+        val view = layoutInflater.inflate(R.layout.dialog_sync, null)
+        val inputUrl = view.findViewById<EditText>(R.id.inputUrl)
+        val inputToken = view.findViewById<EditText>(R.id.inputToken)
+        inputUrl.setText(SheetSync.url(this))
+        inputToken.setText(SheetSync.token(this))
+        AlertDialog.Builder(this)
+            .setTitle("Sinkron Google Sheet")
+            .setMessage(SheetSync.lastSyncLabel(this))
+            .setView(view)
+            .setPositiveButton("Simpan") { _, _ ->
+                SheetSync.saveConfig(this, inputUrl.text.toString(), inputToken.text.toString())
+                Toast.makeText(this, "Konfigurasi disimpan", Toast.LENGTH_SHORT).show()
+            }
+            .setNeutralButton("Kirim semua data") { _, _ ->
+                SheetSync.saveConfig(this, inputUrl.text.toString(), inputToken.text.toString())
+                pushAll()
+            }
+            .setNegativeButton("Tutup", null)
+            .show()
+    }
+
+    private fun pushAll() {
+        if (!SheetSync.isConfigured(this)) {
+            Toast.makeText(this, "Isi URL & token dulu", Toast.LENGTH_SHORT).show()
+            return
+        }
+        Toast.makeText(this, "Mengirim semua data ke sheet...", Toast.LENGTH_SHORT).show()
+        SheetSync.replaceAll(this) { ok ->
+            Toast.makeText(
+                this,
+                if (ok) "Semua data terkirim ke sheet"
+                else "Gagal mengirim, data masuk antrean (dicoba ulang otomatis)",
+                Toast.LENGTH_SHORT
+            ).show()
+        }
     }
 }

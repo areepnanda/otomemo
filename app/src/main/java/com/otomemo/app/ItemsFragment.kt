@@ -23,6 +23,7 @@ class ItemsFragment : MasterListFragment(R.layout.fragment_list) {
     override fun onDelete(row: MasterRow) {
         items.removeAll { it.id == row.id }
         Db.saveItems(requireContext(), items)
+        SheetSync.delete(requireContext(), "items", row.id)
     }
 
     private fun showItemDialog(existing: ServiceItem?) {
@@ -46,12 +47,16 @@ class ItemsFragment : MasterListFragment(R.layout.fragment_list) {
                 if (name.isEmpty()) return@setPositiveButton
                 val type = if (spinnerType.selectedItemPosition == 0) Db.TYPE_MOBIL else Db.TYPE_MOTOR
                 if (existing == null) {
-                    items.add(ServiceItem(System.currentTimeMillis(), name, type))
+                    val item = ServiceItem(System.currentTimeMillis(), name, type)
+                    items.add(item)
+                    Db.saveItems(requireContext(), items)
+                    SheetSync.upsert(requireContext(), "items", item.toJson())
                 } else {
                     existing.name = name
                     existing.type = type
+                    Db.saveItems(requireContext(), items)
+                    SheetSync.upsert(requireContext(), "items", existing.toJson())
                 }
-                Db.saveItems(requireContext(), items)
                 reload()
             }
             .setNegativeButton("Batal", null)

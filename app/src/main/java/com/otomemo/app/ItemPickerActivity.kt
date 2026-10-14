@@ -69,8 +69,10 @@ class ItemPickerActivity : AppCompatActivity() {
                 val name = input.text.toString().trim()
                 if (name.isEmpty()) return@setPositiveButton
                 val allItems = Db.loadItems(this)
-                allItems.add(ServiceItem(System.currentTimeMillis(), name, type))
+                val item = ServiceItem(System.currentTimeMillis(), name, type)
+                allItems.add(item)
                 Db.saveItems(this, allItems)
+                SheetSync.upsert(this, "items", item.toJson())
                 selected.add(name)
                 reload(type)
                 Toast.makeText(this, "Item ditambahkan", Toast.LENGTH_SHORT).show()

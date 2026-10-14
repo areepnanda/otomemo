@@ -16,6 +16,9 @@
     </group>
     <group>
         <item
+            android:id="@+id/nav_sync"
+            android:title="Sinkron Google Sheet" />
+        <item
             android:id="@+id/nav_update"
             android:title="Cek Update" />
     </group>

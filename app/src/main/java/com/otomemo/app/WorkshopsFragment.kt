@@ -10,8 +10,10 @@ class WorkshopsFragment : MasterListFragment(R.layout.fragment_list) {
     }
 
     override fun onAdd() = textDialog("Tambah Bengkel", null) {
-        workshops.add(Workshop(System.currentTimeMillis(), it))
+        val workshop = Workshop(System.currentTimeMillis(), it)
+        workshops.add(workshop)
         Db.saveWorkshops(requireContext(), workshops)
+        SheetSync.upsert(requireContext(), "workshops", workshop.toJson())
     }
 
     override fun onEdit(row: MasterRow) {
@@ -19,11 +21,13 @@ class WorkshopsFragment : MasterListFragment(R.layout.fragment_list) {
         textDialog("Edit Bengkel", workshop.name) {
             workshop.name = it
             Db.saveWorkshops(requireContext(), workshops)
+            SheetSync.upsert(requireContext(), "workshops", workshop.toJson())
         }
     }
 
     override fun onDelete(row: MasterRow) {
         workshops.removeAll { it.id == row.id }
         Db.saveWorkshops(requireContext(), workshops)
+        SheetSync.delete(requireContext(), "workshops", row.id)
     }
 }

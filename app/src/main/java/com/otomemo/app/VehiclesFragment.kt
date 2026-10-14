@@ -23,6 +23,7 @@ class VehiclesFragment : MasterListFragment(R.layout.fragment_list) {
     override fun onDelete(row: MasterRow) {
         vehicles.removeAll { it.id == row.id }
         Db.saveVehicles(requireContext(), vehicles)
+        SheetSync.delete(requireContext(), "vehicles", row.id)
     }
 
     private fun display(v: Vehicle): String =
@@ -61,24 +62,26 @@ class VehiclesFragment : MasterListFragment(R.layout.fragment_list) {
                 if (brand.isEmpty()) return@setPositiveButton
                 val type = if (spinnerType.selectedItemPosition == 0) Db.TYPE_MOBIL else Db.TYPE_MOTOR
                 if (existing == null) {
-                    vehicles.add(
-                        Vehicle(
-                            System.currentTimeMillis(),
-                            brand,
-                            inputModel.text.toString().trim(),
-                            inputYear.text.toString().trim(),
-                            inputPlate.text.toString().trim(),
-                            type
-                        )
+                    val vehicle = Vehicle(
+                        System.currentTimeMillis(),
+                        brand,
+                        inputModel.text.toString().trim(),
+                        inputYear.text.toString().trim(),
+                        inputPlate.text.toString().trim(),
+                        type
                     )
+                    vehicles.add(vehicle)
+                    Db.saveVehicles(requireContext(), vehicles)
+                    SheetSync.upsert(requireContext(), "vehicles", vehicle.toJson())
                 } else {
                     existing.brand = brand
                     existing.type = type
                     existing.model = inputModel.text.toString().trim()
                     existing.year = inputYear.text.toString().trim()
                     existing.plate = inputPlate.text.toString().trim()
+                    Db.saveVehicles(requireContext(), vehicles)
+                    SheetSync.upsert(requireContext(), "vehicles", existing.toJson())
                 }
-                Db.saveVehicles(requireContext(), vehicles)
                 reload()
             }
             .setNegativeButton("Batal", null)

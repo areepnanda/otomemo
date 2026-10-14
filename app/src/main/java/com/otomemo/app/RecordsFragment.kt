@@ -91,10 +91,12 @@ class RecordsFragment : Fragment(R.layout.fragment_records) {
             .setTitle("Hapus catatan?")
             .setMessage("${records[position].vehicleName} - ${records[position].items}")
             .setPositiveButton("Hapus") { _, _ ->
-                records[position].images.forEach { ImageStore.delete(requireContext(), it) }
+                val removed = records[position]
+                removed.images.forEach { ImageStore.delete(requireContext(), it) }
                 records.removeAt(position)
                 adapter.notifyItemRemoved(position)
                 Db.saveRecords(requireContext(), records)
+                SheetSync.delete(requireContext(), "records", removed.id)
                 updateHeader()
             }
             .setNegativeButton("Batal", null)

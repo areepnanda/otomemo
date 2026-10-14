@@ -283,6 +283,7 @@ class FormActivity : AppCompatActivity() {
             val existingIndex = records.indexOfFirst { it.id == record.id }
             if (existingIndex >= 0) records[existingIndex] = record else records.add(record)
             Db.saveRecords(this, records)
+            SheetSync.upsert(this, "records", record.toJson())
 
             (originalImages - imageNames.toSet()).forEach { ImageStore.delete(this, it) }
 
