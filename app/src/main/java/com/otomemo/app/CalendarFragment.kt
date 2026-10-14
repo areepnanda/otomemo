@@ -164,14 +164,5 @@ class CalendarFragment : Fragment(R.layout.fragment_calendar) {
         else -> v.toString()
     }
 
-    private fun parseCal(date: String): Calendar? {
-        return try {
-            val fmt = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
-            fmt.isLenient = false
-            val d = fmt.parse(date)
-            if (d == null) null else Calendar.getInstance().apply { time = d }
-        } catch (_: Exception) {
-            null
-        }
-    }
+    private fun parseCal(date: String): Calendar? = Dates.toCalendar(date)
 }

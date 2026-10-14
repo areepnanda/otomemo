@@ -66,6 +66,8 @@ function doPost(e) {
 
 const NUMERIC_COLS = { id: true, vehicleId: true, odometer: true, cost: true };
 
+const ID_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+
 function readRows_(key) {
   const s = sheet_(key);
   const last = s.sh.getLastRow();
@@ -77,7 +79,7 @@ function readRows_(key) {
       const raw = row[i];
       let v;
       if (raw instanceof Date) {
-        v = Utilities.formatDate(raw, Session.getScriptTimeZone(), 'dd MMM yyyy');
+        v = ('0' + raw.getDate()).slice(-2) + ' ' + ID_MONTHS[raw.getMonth()] + ' ' + raw.getFullYear();
       } else {
         v = (raw === null || raw === undefined) ? '' : String(raw);
       }
@@ -128,8 +130,8 @@ function replaceAll_(data) {
     s.sh.getRange(1, 1, 1, s.conf.cols.length).setValues([s.conf.cols]).setFontWeight('bold');
     s.sh.setFrozenRows(1);
     if (rows.length) {
-      s.sh.getRange(2, 1, rows.length, s.conf.cols.length)
-        .setValues(rows.map(function (r) { return rowValues_(r, s.conf); }));
+      writeText_(s.sh, 2, rows.length, s.conf.cols.length,
+        rows.map(function (r) { return rowValues_(r, s.conf); }));
     }
   }
 }
@@ -141,11 +143,19 @@ function upsert_(key, row) {
   const ids = last > 1 ? s.sh.getRange(2, 1, last - 1, 1).getValues() : [];
   for (let i = 0; i < ids.length; i++) {
     if (String(ids[i][0]) === String(values[0])) {
-      s.sh.getRange(i + 2, 1, 1, values.length).setValues([values]);
+      writeText_(s.sh, i + 2, 1, values.length, [values]);
       return;
     }
   }
-  s.sh.getRange(last + 1, 1, 1, values.length).setValues([values]);
+  writeText_(s.sh, last + 1, 1, values.length, [values]);
+}
+
+// Tulis sebagai teks (format '@') supaya Google Sheet tidak mengubah
+// tanggal/angka jadi tipe Date/Number yang bisa merusak format data.
+function writeText_(sh, row, numRows, numCols, values) {
+  const range = sh.getRange(row, 1, numRows, numCols);
+  range.setNumberFormat('@');
+  range.setValues(values);
 }
 
 function deleteRow_(key, id) {

@@ -3,6 +3,9 @@ package com.otomemo.app
 import android.content.Context
 import org.json.JSONArray
 import org.json.JSONObject
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Locale
 
 data class ServiceRecord(
     val id: Long,
@@ -111,6 +114,32 @@ data class ServiceItem(val id: Long, var name: String, var type: String = Db.TYP
 }
 
 data class MasterRow(val id: Long, val title: String, val subtitle: String)
+
+object Dates {
+    private val formats: List<SimpleDateFormat> = listOf(
+        Locale.getDefault(), Locale("in"), Locale("en")
+    ).map { loc ->
+        SimpleDateFormat("dd MMM yyyy", loc).apply { isLenient = false }
+    } + listOf("yyyy-MM-dd").map { pat ->
+        SimpleDateFormat(pat, Locale.US).apply { isLenient = false }
+    }
+
+    fun parse(date: String): Long? {
+        val s = date.trim()
+        for (f in formats) {
+            try {
+                return f.parse(s)?.time
+            } catch (_: Exception) {
+            }
+        }
+        return null
+    }
+
+    fun toCalendar(date: String): Calendar? {
+        val t = parse(date) ?: return null
+        return Calendar.getInstance().apply { timeInMillis = t }
+    }
+}
 
 object Db {
     private const val PREFS = "otomemo"

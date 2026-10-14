@@ -13,7 +13,6 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import java.text.NumberFormat
-import java.text.SimpleDateFormat
 import java.util.Locale
 
 class RecordsFragment : Fragment(R.layout.fragment_records) {
@@ -121,10 +120,5 @@ class RecordsFragment : Fragment(R.layout.fragment_records) {
             "Total biaya service: Rp ${nf.format(records.sumOf { it.cost })}"
     }
 
-    private fun parseDate(date: String): Long = try {
-        SimpleDateFormat("dd MMM yyyy", Locale.getDefault()).apply { isLenient = false }
-            .parse(date)?.time ?: Long.MIN_VALUE
-    } catch (_: Exception) {
-        Long.MIN_VALUE
-    }
+    private fun parseDate(date: String): Long = Dates.parse(date) ?: Long.MIN_VALUE
 }
