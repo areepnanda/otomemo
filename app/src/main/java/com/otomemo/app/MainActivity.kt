@@ -2,6 +2,7 @@ package com.otomemo.app
 
 import android.os.Bundle
 import android.view.MenuItem
+import android.widget.Button
 import android.widget.EditText
 import android.widget.Toast
 import androidx.appcompat.app.ActionBarDrawerToggle
@@ -18,6 +19,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var drawerLayout: DrawerLayout
     private lateinit var navView: NavigationView
     private lateinit var toolbar: Toolbar
+    private var currentNavId = R.id.nav_service
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -34,6 +36,7 @@ class MainActivity : AppCompatActivity() {
         toggle.syncState()
 
         SheetSync.flushPending(this)
+        SheetSync.pull(this) { ok -> if (ok) select(currentNavId) }
 
         navView.setNavigationItemSelectedListener { item ->
             when (item.itemId) {
@@ -49,11 +52,13 @@ class MainActivity : AppCompatActivity() {
             select(R.id.nav_service)
         } else {
             val current = navView.checkedItem?.itemId ?: R.id.nav_service
+            currentNavId = current
             toolbar.title = titleFor(current)
         }
     }
 
     private fun select(itemId: Int) {
+        currentNavId = itemId
         val fragment: Fragment = when (itemId) {
             R.id.nav_vehicles -> VehiclesFragment()
             R.id.nav_items -> ItemsFragment()
@@ -80,6 +85,10 @@ class MainActivity : AppCompatActivity() {
         val inputToken = view.findViewById<EditText>(R.id.inputToken)
         inputUrl.setText(SheetSync.url(this))
         inputToken.setText(SheetSync.token(this))
+        view.findViewById<Button>(R.id.buttonPull).setOnClickListener {
+            SheetSync.saveConfig(this, inputUrl.text.toString(), inputToken.text.toString())
+            pullFromSheet()
+        }
         AlertDialog.Builder(this)
             .setTitle("Sinkron Google Sheet")
             .setMessage(SheetSync.lastSyncLabel(this))
@@ -94,6 +103,26 @@ class MainActivity : AppCompatActivity() {
             }
             .setNegativeButton("Tutup", null)
             .show()
+    }
+
+    private fun pullFromSheet() {
+        if (!SheetSync.isConfigured(this)) {
+            Toast.makeText(this, "Isi URL & token dulu", Toast.LENGTH_SHORT).show()
+            return
+        }
+        Toast.makeText(this, "Menarik data dari sheet...", Toast.LENGTH_SHORT).show()
+        SheetSync.pull(this) { ok ->
+            if (ok) {
+                select(currentNavId)
+                Toast.makeText(this, "Data dari sheet berhasil ditarik", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(
+                    this,
+                    "Gagal menarik data (cek URL/token, deploy ulang script, atau sheet kosong)",
+                    Toast.LENGTH_LONG
+                ).show()
+            }
+        }
     }
 
     private fun pushAll() {

@@ -96,6 +96,61 @@ object SheetSync {
         executor.execute { flush(appCtx) }
     }
 
+    fun pull(context: Context, onDone: ((Boolean) -> Unit)? = null) {
+        if (!isConfigured(context)) {
+            onDone?.invoke(false)
+            return
+        }
+        val appCtx = context.applicationContext
+        executor.execute {
+            flush(appCtx)
+            if (readQueue(appCtx).isNotEmpty()) {
+                onDone?.invoke(false)
+                return@execute
+            }
+            val payload = JSONObject()
+                .put("token", token(appCtx))
+                .put("action", "fetchAll")
+            val ok = try {
+                val resp = JSONObject(post(url(appCtx), payload.toString()))
+                if (resp.optBoolean("ok", false)) {
+                    applyData(appCtx, resp.getJSONObject("data"))
+                    prefs(appCtx).edit().putLong(KEY_LAST_SYNC, System.currentTimeMillis()).apply()
+                    true
+                } else {
+                    false
+                }
+            } catch (_: Exception) {
+                false
+            }
+            onDone?.let { cb -> main.post { cb(ok) } }
+        }
+    }
+
+    private fun applyData(context: Context, data: JSONObject) {
+        val vehicles = parseList(data.optJSONArray("vehicles")) { Vehicle.fromJson(it) }
+        val items = parseList(data.optJSONArray("items")) { ServiceItem.fromJson(it) }
+        val workshops = parseList(data.optJSONArray("workshops")) { Workshop.fromJson(it) }
+        val records = parseList(data.optJSONArray("records")) { ServiceRecord.fromJson(it) }
+        // Guard: sheet benar-benar kosong -> jangan timpa data lokal
+        if (vehicles.isEmpty() && items.isEmpty() && workshops.isEmpty() && records.isEmpty() &&
+            !(Db.loadVehicles(context).isEmpty() && Db.loadItems(context).isEmpty() &&
+                Db.loadWorkshops(context).isEmpty() && Db.loadRecords(context).isEmpty())
+        ) {
+            return
+        }
+        Db.saveVehicles(context, vehicles)
+        Db.saveItems(context, items)
+        Db.saveWorkshops(context, workshops)
+        Db.saveRecords(context, records)
+    }
+
+    private inline fun <T> parseList(arr: JSONArray?, parse: (JSONObject) -> T): MutableList<T> {
+        val list = mutableListOf<T>()
+        if (arr != null) for (i in 0 until arr.length()) list.add(parse(arr.getJSONObject(i)))
+        return list
+    }
+
     private fun sendAsync(
         context: Context,
         payload: JSONObject,

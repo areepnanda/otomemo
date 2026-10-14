@@ -20,4 +20,11 @@
         android:layout_height="wrap_content"
         android:hint="Token rahasia"
         android:inputType="text" />
+
+    <Button
+        android:id="@+id/buttonPull"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="Tarik data dari sheet" />
 </LinearLayout>

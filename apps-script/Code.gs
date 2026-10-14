@@ -19,7 +19,11 @@
  * CATATAN:
  * - Tab Vehicles, Items, Workshops, Records dibuat otomatis di sheet.
  * - Add/edit/delete dari app otomatis terkirim ke sheet.
+ * - Edit/add/hapus baris di sheet otomatis ketarik ke app
+ *   saat app dibuka (atau lewat tombol "Tarik data dari sheet").
  * - Kalau HP offline, perubahan masuk antrean dan terkirim saat online.
+ * - KALAU SUDAH PERNAH PASANG versi lama: replace isi file ini, lalu
+ *   Deploy -> Manage deployments -> ikon pensil -> Version: New version -> Deploy.
  * - Ganti TOKEN kalau URL kebocoran: cukup ubah TOKEN di sini,
  *   deploy ulang (New deployment atau edit deployment), lalu update token di app.
  */
@@ -42,18 +46,56 @@ function doPost(e) {
   try {
     const req = JSON.parse(e.postData.contents);
     if (req.token !== TOKEN) throw new Error('Token salah');
-    switch (req.action) {
-      case 'replaceAll': replaceAll_(req.data); break;
-      case 'upsert': upsert_(req.table, req.row); break;
-      case 'delete': deleteRow_(req.table, req.id); break;
-      default: throw new Error('Action tidak dikenal: ' + req.action);
+    if (req.action === 'fetchAll') {
+      res = { ok: true, data: fetchAll_() };
+    } else {
+      switch (req.action) {
+        case 'replaceAll': replaceAll_(req.data); break;
+        case 'upsert': upsert_(req.table, req.row); break;
+        case 'delete': deleteRow_(req.table, req.id); break;
+        default: throw new Error('Action tidak dikenal: ' + req.action);
+      }
+      res = { ok: true };
     }
-    res = { ok: true };
   } catch (err) {
     res = { ok: false, error: String(err && err.message ? err.message : err) };
   }
   return ContentService.createTextOutput(JSON.stringify(res))
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+const NUMERIC_COLS = { id: true, vehicleId: true, odometer: true, cost: true };
+
+function readRows_(key) {
+  const s = sheet_(key);
+  const last = s.sh.getLastRow();
+  if (last < 2) return [];
+  const values = s.sh.getRange(2, 1, last - 1, s.conf.cols.length).getValues();
+  return values.map(function (row) {
+    const obj = {};
+    s.conf.cols.forEach(function (c, i) {
+      const raw = row[i];
+      let v;
+      if (raw instanceof Date) {
+        v = Utilities.formatDate(raw, Session.getScriptTimeZone(), 'dd MMM yyyy');
+      } else {
+        v = (raw === null || raw === undefined) ? '' : String(raw);
+      }
+      if (NUMERIC_COLS[c] && v !== '') v = Number(v);
+      if (c === 'images') {
+        obj[c] = v ? v.split(',').map(function (x) { return x.trim(); }).filter(String) : [];
+      } else {
+        obj[c] = v;
+      }
+    });
+    return obj;
+  });
+}
+
+function fetchAll_() {
+  const data = {};
+  for (const key in TABLES) data[key] = readRows_(key);
+  return data;
 }
 
 function sheet_(key) {
