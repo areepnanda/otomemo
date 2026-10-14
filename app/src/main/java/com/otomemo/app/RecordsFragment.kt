@@ -38,7 +38,6 @@ class RecordsFragment : Fragment(R.layout.fragment_records) {
     private val nf = NumberFormat.getInstance(Locale("in", "ID"))
     private lateinit var adapter: RecordAdapter
     private lateinit var dayAdapter: DayAdapter
-    private lateinit var dayExpenseAdapter: DayExpenseAdapter
     private val dayRecords = mutableMapOf<Int, MutableList<ServiceRecord>>()
 
     private data class DayCell(val day: Int, val total: Long, val records: List<ServiceRecord>)
@@ -46,7 +45,6 @@ class RecordsFragment : Fragment(R.layout.fragment_records) {
     private inner class DayAdapter : RecyclerView.Adapter<DayAdapter.Holder>() {
 
         val cells = mutableListOf<DayCell>()
-        var selectedDay = 0
 
         inner class Holder(view: View) : RecyclerView.ViewHolder(view) {
             val day: TextView = view.findViewById(R.id.textDay)
@@ -69,53 +67,15 @@ class RecordsFragment : Fragment(R.layout.fragment_records) {
                 return
             }
             holder.day.text = cell.day.toString()
-            when {
-                cell.day == selectedDay -> {
-                    holder.day.setBackgroundResource(R.drawable.bg_day_selected)
-                    holder.day.setTextColor(Color.WHITE)
-                }
-                isToday(cell.day) -> {
-                    holder.day.setBackgroundResource(R.drawable.bg_day_today)
-                    holder.day.setTextColor(Color.parseColor("#00796B"))
-                }
-                else -> {
-                    holder.day.background = null
-                    holder.day.setTextColor(Color.parseColor("#333333"))
-                }
+            if (isToday(cell.day)) {
+                holder.day.setBackgroundResource(R.drawable.bg_day_today)
+                holder.day.setTextColor(Color.parseColor("#00796B"))
+            } else {
+                holder.day.background = null
+                holder.day.setTextColor(Color.parseColor("#333333"))
             }
             holder.dot.visibility = if (cell.total > 0) View.VISIBLE else View.GONE
-            holder.itemView.setOnClickListener {
-                selectedDay = if (selectedDay == cell.day) 0 else cell.day
-                notifyDataSetChanged()
-                updateDayPanel()
-            }
-        }
-    }
-
-    private inner class DayExpenseAdapter : RecyclerView.Adapter<DayExpenseAdapter.Holder>() {
-
-        val rows = mutableListOf<ServiceRecord>()
-
-        inner class Holder(view: View) : RecyclerView.ViewHolder(view) {
-            val vehicle: TextView = view.findViewById(R.id.textVehicle)
-            val detail: TextView = view.findViewById(R.id.textItems)
-            val cost: TextView = view.findViewById(R.id.textCost)
-        }
-
-        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) =
-            Holder(layoutInflater.inflate(R.layout.item_day_expense, parent, false))
-
-        override fun getItemCount() = rows.size
-
-        override fun onBindViewHolder(holder: Holder, position: Int) {
-            val r = rows[position]
-            holder.vehicle.text = r.vehicleName
-            holder.detail.text = listOfNotNull(
-                r.items.ifEmpty { null },
-                r.workshop.ifEmpty { null }
-            ).joinToString("  •  ")
-            holder.cost.text = "Rp ${nf.format(r.cost)}"
-            holder.itemView.setOnClickListener { showDetail(r) }
+            holder.itemView.setOnClickListener { showDayDialog(cell.day, cell.records) }
         }
     }
 
@@ -185,21 +145,14 @@ class RecordsFragment : Fragment(R.layout.fragment_records) {
             layoutManager = GridLayoutManager(requireContext(), 7)
             adapter = dayAdapter
         }
-        dayExpenseAdapter = DayExpenseAdapter()
-        view.findViewById<RecyclerView>(R.id.recyclerDayExpenses).apply {
-            layoutManager = LinearLayoutManager(requireContext())
-            adapter = dayExpenseAdapter
-        }
         buildWeekHeader(view)
 
         view.findViewById<TextView>(R.id.buttonPrev).setOnClickListener {
             current.add(Calendar.MONTH, -1)
-            dayAdapter.selectedDay = 0
             refreshCalendar()
         }
         view.findViewById<TextView>(R.id.buttonNext).setOnClickListener {
             current.add(Calendar.MONTH, 1)
-            dayAdapter.selectedDay = 0
             refreshCalendar()
         }
     }
@@ -310,39 +263,6 @@ class RecordsFragment : Fragment(R.layout.fragment_records) {
             "Rp ${nf.format(monthTotal)}"
         view.findViewById<TextView>(R.id.textMonthCount).text =
             "${dayRecords.values.sumOf { it.size }} catatan"
-        updateDayPanel()
-    }
-
-    private fun updateDayPanel() {
-        val view = view ?: return
-        val header = view.findViewById<TextView>(R.id.textDayHeader)
-        val empty = view.findViewById<TextView>(R.id.textDayEmpty)
-        val list = view.findViewById<RecyclerView>(R.id.recyclerDayExpenses)
-        val day = if (::dayAdapter.isInitialized) dayAdapter.selectedDay else 0
-        if (day <= 0) {
-            header.text = "Pengeluaran harian"
-            empty.text = "Ketuk tanggal untuk melihat pengeluaran"
-            empty.visibility = View.VISIBLE
-            list.visibility = View.GONE
-        } else {
-            val cal = current.clone() as Calendar
-            cal.set(Calendar.DAY_OF_MONTH, day)
-            header.text =
-                SimpleDateFormat("EEEE, d MMMM yyyy", Locale.getDefault()).format(cal.time)
-                    .replaceFirstChar { it.uppercase() }
-            val recs = dayRecords[day].orEmpty()
-            if (recs.isEmpty()) {
-                empty.text = "Tidak ada pengeluaran di tanggal ini"
-                empty.visibility = View.VISIBLE
-                list.visibility = View.GONE
-            } else {
-                empty.visibility = View.GONE
-                list.visibility = View.VISIBLE
-            }
-            dayExpenseAdapter.rows.clear()
-            dayExpenseAdapter.rows.addAll(recs)
-            dayExpenseAdapter.notifyDataSetChanged()
-        }
     }
 
     private fun isToday(day: Int): Boolean {
@@ -424,6 +344,26 @@ class RecordsFragment : Fragment(R.layout.fragment_records) {
                 refreshCalendar()
             }
             .setNegativeButton("Batal", null)
+            .show()
+    }
+
+    private fun showDayDialog(day: Int, dayRecords: List<ServiceRecord>) {
+        val cal = current.clone() as Calendar
+        cal.set(Calendar.DAY_OF_MONTH, day)
+        val title =
+            SimpleDateFormat("EEEE, d MMMM yyyy", Locale.getDefault()).format(cal.time)
+                .replaceFirstChar { it.uppercase() }
+        val message = dayRecords.joinToString("\n\n") { r ->
+            buildString {
+                append("• ${r.vehicleName} - ${r.items}")
+                append("\nRp ${nf.format(r.cost)}")
+                if (r.workshop.isNotEmpty()) append("\nBengkel: ${r.workshop}")
+            }
+        }
+        AlertDialog.Builder(requireContext())
+            .setTitle(title)
+            .setMessage(message)
+            .setPositiveButton("Tutup", null)
             .show()
     }
 
