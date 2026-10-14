@@ -29,7 +29,7 @@ class CalendarFragment : Fragment(R.layout.fragment_calendar) {
 
         val cells = mutableListOf<DayCell>()
 
-        class Holder(view: View) : RecyclerView.ViewHolder(view) {
+        inner class Holder(view: View) : RecyclerView.ViewHolder(view) {
             val day: TextView = view.findViewById(R.id.textDay)
             val cost: TextView = view.findViewById(R.id.textCost)
         }
