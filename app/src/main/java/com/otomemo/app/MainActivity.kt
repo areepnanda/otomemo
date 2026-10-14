@@ -63,6 +63,7 @@ class MainActivity : AppCompatActivity() {
             R.id.nav_vehicles -> VehiclesFragment()
             R.id.nav_items -> ItemsFragment()
             R.id.nav_workshops -> WorkshopsFragment()
+            R.id.nav_calendar -> CalendarFragment()
             else -> RecordsFragment()
         }
         toolbar.title = titleFor(itemId)
@@ -76,6 +77,7 @@ class MainActivity : AppCompatActivity() {
         R.id.nav_vehicles -> "Kendaraan"
         R.id.nav_items -> "Item"
         R.id.nav_workshops -> "Bengkel"
+        R.id.nav_calendar -> "Kalender"
         else -> "Service"
     }
 
