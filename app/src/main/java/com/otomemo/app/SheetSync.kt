@@ -174,7 +174,7 @@ object SheetSync {
                 }
                 if (code !in 200..299) {
                     val err = try {
-                        conn.errorStream?.bufferedReader()?.readText()?.take(200)
+                        conn.errorStream?.bufferedReader()?.readText()?.take(200).orEmpty()
                     } catch (_: Exception) {
                         ""
                     }
