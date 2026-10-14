@@ -73,7 +73,7 @@ class CalendarFragment : Fragment(R.layout.fragment_calendar) {
                 gravity = Gravity.CENTER
                 setTextColor(Color.parseColor("#666666"))
                 textSize = 12f
-                minHeight = dp(32)
+                minimumHeight = dp(32)
                 setPadding(dp(2), dp(4), dp(2), dp(4))
                 layoutParams = cellParams()
             }
@@ -95,7 +95,7 @@ class CalendarFragment : Fragment(R.layout.fragment_calendar) {
             val cell = LinearLayout(requireContext()).apply {
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER
-                minHeight = dp(52)
+                minimumHeight = dp(52)
                 setPadding(dp(2), dp(4), dp(2), dp(4))
                 layoutParams = cellParams()
                 if (dayTotal > 0) background = highlight
