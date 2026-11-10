@@ -9,6 +9,9 @@ import androidx.appcompat.app.ActionBarDrawerToggle
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
+import androidx.biometric.BiometricManager
+import androidx.biometric.BiometricPrompt
+import androidx.core.content.ContextCompat
 import androidx.core.view.GravityCompat
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.fragment.app.Fragment
@@ -23,6 +26,53 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        if (savedInstanceState == null && !isProtectionAvailable()) {
+            // Tidak ada sidik jari/kunci layar terdaftar -> buka langsung
+            initMainUi()
+            return
+        }
+        if (savedInstanceState == null) {
+            showBiometricGate()
+        } else {
+            // Reorientasi/recreate: UI tetap tampil tanpa prompt ulang
+            initMainUi()
+        }
+    }
+
+    private fun isProtectionAvailable(): Boolean {
+        val authenticators = BiometricManager.Authenticators.BIOMETRIC_WEAK or
+                BiometricManager.Authenticators.DEVICE_CREDENTIAL
+        return BiometricManager.from(this)
+            .canAuthenticate(authenticators) == BiometricManager.BIOMETRIC_SUCCESS
+    }
+
+    private fun showBiometricGate() {
+        val authenticators = BiometricManager.Authenticators.BIOMETRIC_WEAK or
+                BiometricManager.Authenticators.DEVICE_CREDENTIAL
+        val prompt = BiometricPrompt(
+            this,
+            ContextCompat.getMainExecutor(this),
+            object : BiometricPrompt.AuthenticationCallback() {
+                override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                    if (isFinishing || isDestroyed) return
+                    initMainUi()
+                }
+
+                override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                    Toast.makeText(this@MainActivity, errString, Toast.LENGTH_LONG).show()
+                    finish()
+                }
+            }
+        )
+        val info = BiometricPrompt.PromptInfo.Builder()
+            .setTitle("OtoMemo Terkunci")
+            .setSubtitle("Gunakan sidik jari atau kunci layar perangkat")
+            .setAllowedAuthenticators(authenticators)
+            .build()
+        prompt.authenticate(info)
+    }
+
+    private fun initMainUi() {
         setContentView(R.layout.activity_main)
 
         drawerLayout = findViewById(R.id.drawerLayout)
@@ -48,7 +98,7 @@ class MainActivity : AppCompatActivity() {
             true
         }
 
-        if (savedInstanceState == null) {
+        if (supportFragmentManager.findFragmentById(R.id.container) == null) {
             select(R.id.nav_service)
         } else {
             val current = navView.checkedItem?.itemId ?: R.id.nav_service
