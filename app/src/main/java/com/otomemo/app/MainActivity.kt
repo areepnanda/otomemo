@@ -2,7 +2,6 @@ package com.otomemo.app
 
 import android.os.Bundle
 import android.view.MenuItem
-import android.widget.Button
 import android.widget.EditText
 import android.widget.Toast
 import androidx.appcompat.app.ActionBarDrawerToggle
@@ -91,7 +90,7 @@ class MainActivity : AppCompatActivity() {
         navView.setNavigationItemSelectedListener { item ->
             when (item.itemId) {
                 R.id.nav_update -> Updater.check(this)
-                R.id.nav_sync -> showSyncDialog()
+                R.id.nav_sync -> onSyncMenu()
                 else -> select(item.itemId)
             }
             drawerLayout.closeDrawer(GravityCompat.START)
@@ -129,30 +128,53 @@ class MainActivity : AppCompatActivity() {
         else -> "Service"
     }
 
+    private fun onSyncMenu() {
+        if (SheetSync.isConfigured(this)) {
+            showSyncDialog()
+        } else {
+            showConfigDialog()
+        }
+    }
+
     private fun showSyncDialog() {
+        AlertDialog.Builder(this)
+            .setTitle("Sinkron Google Sheet")
+            .setMessage(SheetSync.lastSyncLabel(this))
+            .setPositiveButton("Tarik data") { _, _ -> pullFromSheet() }
+            .setNeutralButton("Kirim semua data") { _, _ -> pushAll() }
+            .setNegativeButton("Ubah konfigurasi") { _, _ -> showConfigDialog() }
+            .show()
+    }
+
+    private fun showConfigDialog() {
+        val configured = SheetSync.isConfigured(this)
         val view = layoutInflater.inflate(R.layout.dialog_sync, null)
         val inputUrl = view.findViewById<EditText>(R.id.inputUrl)
         val inputToken = view.findViewById<EditText>(R.id.inputToken)
         inputUrl.setText(SheetSync.url(this))
         inputToken.setText(SheetSync.token(this))
-        view.findViewById<Button>(R.id.buttonPull).setOnClickListener {
-            SheetSync.saveConfig(this, inputUrl.text.toString(), inputToken.text.toString())
-            pullFromSheet()
-        }
-        AlertDialog.Builder(this)
-            .setTitle("Sinkron Google Sheet")
-            .setMessage(SheetSync.lastSyncLabel(this))
+        val builder = AlertDialog.Builder(this)
+            .setTitle(if (configured) "Ubah Konfigurasi Google Sheet" else "Konfigurasi Google Sheet")
             .setView(view)
             .setPositiveButton("Simpan") { _, _ ->
                 SheetSync.saveConfig(this, inputUrl.text.toString(), inputToken.text.toString())
                 Toast.makeText(this, "Konfigurasi disimpan", Toast.LENGTH_SHORT).show()
+                pullFromSheet()
             }
-            .setNeutralButton("Kirim semua data") { _, _ ->
-                SheetSync.saveConfig(this, inputUrl.text.toString(), inputToken.text.toString())
-                pushAll()
+        if (configured) builder.setNegativeButton("Batal", null)
+        val dialog = builder.create()
+        dialog.setCanceledOnTouchOutside(configured)
+        dialog.show()
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
+            if (inputUrl.text.toString().trim().isEmpty() || inputToken.text.toString().trim().isEmpty()) {
+                Toast.makeText(this, "URL & token wajib diisi", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
             }
-            .setNegativeButton("Tutup", null)
-            .show()
+            SheetSync.saveConfig(this, inputUrl.text.toString(), inputToken.text.toString())
+            Toast.makeText(this, "Konfigurasi disimpan", Toast.LENGTH_SHORT).show()
+            dialog.dismiss()
+            pullFromSheet()
+        }
     }
 
     private fun pullFromSheet() {
