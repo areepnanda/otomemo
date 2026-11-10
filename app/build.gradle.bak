@@ -1,0 +1,66 @@
+plugins {
+    id 'com.android.application'
+    id 'org.jetbrains.kotlin.android'
+}
+
+def ksPath = rootProject.file("keystore.jks")
+def ksPassword = System.getenv("KEYSTORE_PASSWORD")
+def ksAlias = System.getenv("KEY_ALIAS")
+def signingAvailable = ksPath.exists() && ksPassword != null && ksAlias != null
+
+android {
+    namespace 'com.otomemo.app'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId "com.otomemo.app"
+        minSdk 24
+        targetSdk 34
+        versionCode 19
+        versionName "1.18"
+    }
+
+    signingConfigs {
+        if (signingAvailable) {
+            otomemo {
+                storeFile ksPath
+                storePassword ksPassword
+                keyAlias ksAlias
+                keyPassword ksPassword
+            }
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            if (signingAvailable) {
+                signingConfig signingConfigs.otomemo
+            }
+        }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+    buildFeatures {
+        buildConfig true
+    }
+    applicationVariants.all { variant ->
+        variant.outputs.all {
+            outputFileName = "OtoMemo-v${variant.versionName}.apk"
+        }
+    }
+}
+
+dependencies {
+    implementation 'org.jetbrains.kotlin:kotlin-stdlib:1.9.22'
+    implementation 'androidx.core:core-ktx:1.12.0'
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'com.google.android.material:material:1.11.0'
+    implementation 'androidx.recyclerview:recyclerview:1.3.2'
+}
